@@ -1,4 +1,5 @@
 # Backend: Python virtual environment and caches
+.agents
 diff-service/.venv/
 diff-service/__pycache__/
 diff-service/**/__pycache__/
