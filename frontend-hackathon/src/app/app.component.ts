@@ -10,4 +10,4 @@ import { NavComponent } from './shared/nav/nav.component';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {}
+export class AppComponent { }
