@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from main import app
 from services import claude_service
+from routers import documents
 
 
 client = TestClient(app)
@@ -161,6 +162,131 @@ def test_suggest_endpoint_returns_only_revalidated_candidates(
                     "lab_weight": 20,
                     "project_weight": 20,
                 },
+            }
+        ],
+    }
+
+
+def test_draft_guards_endpoint_returns_schema_and_guard_drafts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_generate_guard_drafts(
+        *,
+        document_type: str,
+        template: dict,
+        schema: dict,
+        baseline_guard_drafts: list[dict],
+    ) -> dict:
+        assert document_type == "grading_sheet"
+        assert template["final_grade"] == 9.0
+        return {
+            "guard_drafts": [
+                {
+                    "field": "final_grade",
+                    "selected_code": "final_grade_numeric",
+                    "rationale": "Numeric grades are expected here.",
+                    "suggestions": [
+                        {
+                            "code": "final_grade_numeric",
+                            "label": "Numeric value",
+                            "description": "Require a numeric final grade.",
+                            "guard": {
+                                "code": "final_grade_numeric",
+                                "kind": "type_is",
+                                "field": "final_grade",
+                                "message": "Field 'final_grade' must be numeric.",
+                                "params": {"expected_type": "number"},
+                            },
+                        },
+                        {
+                            "code": "final_grade_range",
+                            "label": "Grade range 1-10",
+                            "description": "Restrict the value to the Romanian grading scale.",
+                            "guard": {
+                                "code": "final_grade_range",
+                                "kind": "range",
+                                "field": "final_grade",
+                                "message": "Field 'final_grade' must be between 1 and 10.",
+                                "params": {"min_value": 1, "max_value": 10},
+                            },
+                        },
+                    ],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(documents, "generate_guard_drafts", fake_generate_guard_drafts)
+
+    response = client.post(
+        "/api/documents/draft-guards",
+        json={
+            "document_type": "grading_sheet",
+            "template": {
+                "student_name": "Ana Popescu",
+                "final_grade": 9.0,
+                "attendance_percentage": 87.0,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "document_type": "grading_sheet",
+        "template": {
+            "student_name": "Ana Popescu",
+            "final_grade": 9.0,
+            "attendance_percentage": 87.0,
+        },
+        "schema": {
+            "fields": {
+                "student_name": {"type": "string", "required": True},
+                "final_grade": {"type": "number", "required": True},
+                "attendance_percentage": {"type": "number", "required": True},
+            }
+        },
+        "guard_drafts": [
+            {
+                "field": "final_grade",
+                "field_type": "number",
+                "current_value": 9.0,
+                "enabled": True,
+                "selected_code": "final_grade_numeric",
+                "rationale": "Numeric grades are expected here.",
+                "suggestions": [
+                    {
+                        "code": "final_grade_numeric",
+                        "label": "Numeric value",
+                        "description": "Require a numeric final grade.",
+                        "guard": {
+                            "code": "final_grade_numeric",
+                            "kind": "type_is",
+                            "field": "final_grade",
+                            "message": "Field 'final_grade' must be numeric.",
+                            "params": {"expected_type": "number"},
+                        },
+                    },
+                    {
+                        "code": "final_grade_range",
+                        "label": "Grade range 1-10",
+                        "description": "Restrict the value to the Romanian grading scale.",
+                        "guard": {
+                            "code": "final_grade_range",
+                            "kind": "range",
+                            "field": "final_grade",
+                            "message": "Field 'final_grade' must be between 1 and 10.",
+                            "params": {"min_value": 1, "max_value": 10},
+                        },
+                    },
+                ],
+            }
+        ],
+        "guards": [
+            {
+                "code": "final_grade_numeric",
+                "kind": "type_is",
+                "field": "final_grade",
+                "message": "Field 'final_grade' must be numeric.",
+                "params": {"expected_type": "number"},
             }
         ],
     }

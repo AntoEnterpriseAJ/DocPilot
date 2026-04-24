@@ -4,6 +4,7 @@ Call Claude Sonnet 4.6 with forced tool_use to guarantee structured JSON output.
 Forced tool_use means Claude will ALWAYS respond with a ToolUseBlock matching
 the defined input_schema — no need to parse free-form text.
 """
+import json
 import os
 
 import anthropic
@@ -146,6 +147,116 @@ _SYSTEM_PROMPT = (
     "Keep table columns logically separated and do not merge unrelated columns. "
     "Mark confidence 'medium' or 'low' for handwritten, partially legible, ambiguous, or layout-dependent values. "
     "Do not invent data absent from the document."
+)
+
+_SUGGESTION_TOOL: dict = {
+    "name": "suggest_template_fixes",
+    "description": (
+        "Suggest 2-3 compliant fixes for a template that violated one or more guards. "
+        "Return a short explanation and structured patch options only."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "explanation": {
+                "type": "string",
+                "description": "Short explanation of why the current template is invalid.",
+            },
+            "suggestions": {
+                "type": "array",
+                "description": "Candidate compliant fixes expressed as structured patches.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "code": {"type": "string"},
+                        "label": {"type": "string"},
+                        "reason": {"type": "string"},
+                        "confidence": {
+                            "type": "string",
+                            "enum": ["high", "medium", "low"],
+                        },
+                        "patch": {
+                            "type": "object",
+                            "description": (
+                                "Partial template update to apply if the user accepts this suggestion."
+                            ),
+                        },
+                    },
+                    "required": ["code", "label", "reason", "confidence", "patch"],
+                },
+            },
+        },
+        "required": ["explanation", "suggestions"],
+    },
+}
+
+_SUGGESTION_SYSTEM_PROMPT = (
+    "You are a correction assistant for Romanian academic templates. "
+    "You help repair structured templates for grading, discipline sheets, curriculum forms, and related university paperwork. "
+    "Given a user instruction, current template state, schema summary, guard rules, and current violations, produce only compliant candidate fixes. "
+    "Return 2 to 3 concrete patch suggestions when possible. "
+    "Never propose a patch that still violates the guards. "
+    "Do not return prose-only advice without a patch. "
+    "Do not repeat invalid states. "
+    "Prefer minimal patch changes that preserve the user's apparent intent while satisfying the rules. "
+    "For grading or assessment templates, keep grading weights internally consistent, respect hard caps such as a maximum exam percentage, and preserve totals such as 100% distributions."
+)
+
+_GUARD_DRAFT_TOOL: dict = {
+    "name": "suggest_guard_drafts",
+    "description": (
+        "Suggest editable guard drafts for extracted template fields. "
+        "Return field-scoped options with one selected default per field."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "guard_drafts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "field": {"type": "string"},
+                        "selected_code": {"type": "string"},
+                        "rationale": {"type": "string"},
+                        "suggestions": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {"type": "string"},
+                                    "label": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "guard": {
+                                        "type": "object",
+                                        "properties": {
+                                            "code": {"type": "string"},
+                                            "kind": {"type": "string"},
+                                            "field": {"type": "string"},
+                                            "message": {"type": "string"},
+                                            "params": {"type": "object"},
+                                        },
+                                        "required": ["code", "kind", "field", "message", "params"],
+                                    },
+                                },
+                                "required": ["code", "label", "description", "guard"],
+                            },
+                        },
+                    },
+                    "required": ["field", "selected_code", "rationale", "suggestions"],
+                },
+            }
+        },
+        "required": ["guard_drafts"],
+    },
+}
+
+_GUARD_DRAFT_SYSTEM_PROMPT = (
+    "You are an academic template guard assistant. "
+    "Given an extracted template, inferred schema, and deterministic baseline guard drafts, "
+    "return only field-level guard suggestions that would help a user review and export a guards file. "
+    "Each field should have a selected default and 1-3 meaningful alternatives. "
+    "Prefer concise, machine-usable guard definitions over prose."
 )
 
 
@@ -403,26 +514,83 @@ def generate_template_suggestions(
     violations: list[dict],
     max_suggestions: int,
 ) -> dict:
-    """Return structured semantic suggestions for an invalid template.
+    """Return structured semantic suggestions for an invalid template."""
+    messages = [
+        {
+            "role": "user",
+            "content": (
+                "Generate compliant fix suggestions for this invalid template. "
+                f"Return at most {max_suggestions} suggestions.\n\n"
+                f"User instruction:\n{user_message}\n\n"
+                f"Current template (JSON):\n{_to_json_block(template)}\n\n"
+                f"Schema (JSON):\n{_to_json_block(schema)}\n\n"
+                f"Guards (JSON):\n{_to_json_block(guards)}\n\n"
+                f"Current violations (JSON):\n{_to_json_block(violations)}\n"
+            ),
+        }
+    ]
+    return _call_claude_tool(
+        messages=messages,
+        system_prompt=_SUGGESTION_SYSTEM_PROMPT,
+        tool=_SUGGESTION_TOOL,
+        tool_name="suggest_template_fixes",
+    )
 
-    The current default is a safe fallback that returns no patches until a
-    template-specific Claude prompt is added. Callers revalidate every patch.
-    """
-    _ = user_message, template, schema, guards, violations, max_suggestions
-    return {
-        "explanation": "The template violates one or more guards.",
-        "suggestions": [],
-    }
+
+def generate_guard_drafts(
+    *,
+    document_type: str,
+    template: dict,
+    schema: dict,
+    baseline_guard_drafts: list[dict],
+) -> dict:
+    messages = [
+        {
+            "role": "user",
+            "content": (
+                "Generate editable guard drafts for this extracted template. "
+                "Keep suggestions grounded in the current field values and the baseline options.\n\n"
+                f"Document type:\n{document_type}\n\n"
+                f"Template (JSON):\n{_to_json_block(template)}\n\n"
+                f"Schema (JSON):\n{_to_json_block(schema)}\n\n"
+                f"Baseline guard drafts (JSON):\n{_to_json_block(baseline_guard_drafts)}\n"
+            ),
+        }
+    ]
+    return _call_claude_tool(
+        messages=messages,
+        system_prompt=_GUARD_DRAFT_SYSTEM_PROMPT,
+        tool=_GUARD_DRAFT_TOOL,
+        tool_name="suggest_guard_drafts",
+    )
 
 
 def _call_claude(messages: list[dict]) -> dict:
+    return _call_claude_tool(
+        messages=messages,
+        system_prompt=_SYSTEM_PROMPT,
+        tool=_EXTRACTION_TOOL,
+        tool_name="extract_document_data",
+    )
+
+
+def _to_json_block(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _call_claude_tool(
+    *,
+    messages: list[dict],
+    system_prompt: str,
+    tool: dict,
+    tool_name: str,
+) -> dict:
     response = _get_client().messages.create(
         model=_MODEL,
         max_tokens=_MAX_TOKENS,
-        system=_SYSTEM_PROMPT,
-        tools=[_EXTRACTION_TOOL],
-        # Force Claude to always use the extraction tool — guarantees structured output
-        tool_choice={"type": "tool", "name": "extract_document_data"},
+        system=system_prompt,
+        tools=[tool],
+        tool_choice={"type": "tool", "name": tool_name},
         messages=messages,
     )
 
@@ -431,13 +599,11 @@ def _call_claude(messages: list[dict]) -> dict:
 
     if response.stop_reason == "max_tokens":
         raise RuntimeError(
-            "Extraction exceeded the maximum token limit. "
-            "The document may be too large — try uploading individual pages."
+            "Claude response exceeded the maximum token limit. "
+            "Try sending a smaller payload or fewer pages."
         )
 
     block = response.content[0]
-    # With forced tool_use, content[0] is always a ToolUseBlock whose .input
-    # is a dict validated against our schema.
     if not hasattr(block, "input") or not isinstance(block.input, dict):
         raise RuntimeError(
             f"Unexpected Claude response block type '{type(block).__name__}'; "
