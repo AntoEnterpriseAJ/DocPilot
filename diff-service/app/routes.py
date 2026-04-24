@@ -67,9 +67,9 @@ def diff_documents():
         differ = _load_implementation(DIFFER_REGISTRY, ACTIVE_DIFFER)
         analyzer = _load_implementation(ANALYZER_REGISTRY, ACTIVE_ANALYZER)
         
-        # Extract
-        old_pages = extractor.extract(file_old.stream)
-        new_pages = extractor.extract(file_new.stream)
+        # Extract (read bytes upfront to avoid non-seekable stream issues)
+        old_pages = extractor.extract(file_old.read())
+        new_pages = extractor.extract(file_new.read())
         
         # Parse
         old_sections = parser.parse(old_pages)
