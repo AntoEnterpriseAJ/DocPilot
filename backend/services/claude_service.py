@@ -257,6 +257,27 @@ def chat(user_message: str, document_contexts: list[dict]) -> str:
     return response.content[0].text  # type: ignore[union-attr]
 
 
+def generate_template_suggestions(
+    *,
+    user_message: str,
+    template: dict,
+    schema: dict,
+    guards: list[dict],
+    violations: list[dict],
+    max_suggestions: int,
+) -> dict:
+    """Return structured semantic suggestions for an invalid template.
+
+    The current default is a safe fallback that returns no patches until a
+    template-specific Claude prompt is added. Callers revalidate every patch.
+    """
+    _ = user_message, template, schema, guards, violations, max_suggestions
+    return {
+        "explanation": "The template violates one or more guards.",
+        "suggestions": [],
+    }
+
+
 def _call_claude(messages: list[dict]) -> dict:
     response = _get_client().messages.create(
         model=_MODEL,

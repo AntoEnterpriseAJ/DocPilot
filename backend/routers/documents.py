@@ -1,11 +1,15 @@
 import re
+from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic import ValidationError
 
 from schemas.extraction import ExtractedDocument
+from schemas.template_validation import SemanticSuggestionResult, ValidationResult
 from services import claude_service, pdf_router, scan_extractor, text_extractor
+from services.template_suggester import suggest_template_fixes
+from services.template_validator import validate_template
 
 router = APIRouter()
 
@@ -17,6 +21,19 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class ValidateTemplateRequest(BaseModel):
+    template: dict[str, Any]
+    template_schema: dict[str, Any] = Field(alias="schema")
+    guards: list[dict[str, Any]] = []
+
+
+class SuggestTemplateRequest(BaseModel):
+    user_message: str
+    template: dict[str, Any]
+    template_schema: dict[str, Any] = Field(alias="schema")
+    guards: list[dict[str, Any]] = []
 
 _PDF_MIMES = {"application/pdf"}
 _IMAGE_MIMES = {
@@ -125,3 +142,24 @@ async def chat(req: ChatRequest) -> ChatResponse:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Chat failed: {exc}") from exc
     return ChatResponse(reply=reply)
+
+
+@router.post("/validate", response_model=ValidationResult)
+async def validate(req: ValidateTemplateRequest) -> ValidationResult:
+    """Validate a generic template against a provided schema and guard set."""
+    return validate_template(
+        template=req.template,
+        schema=req.template_schema,
+        guards=req.guards,
+    )
+
+
+@router.post("/suggest", response_model=SemanticSuggestionResult)
+async def suggest(req: SuggestTemplateRequest) -> SemanticSuggestionResult:
+    """Generate semantic fix suggestions, then keep only revalidated patches."""
+    return suggest_template_fixes(
+        user_message=req.user_message,
+        template=req.template,
+        schema=req.template_schema,
+        guards=req.guards,
+    )
