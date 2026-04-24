@@ -1,10 +1,10 @@
 /**
- * DiffViewerComponent - displays diffs in git-style table format.
+ * DiffViewerComponent - displays diffs in GitHub Desktop–style unified format.
  */
 
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SectionDiff, LineDiff, InlineDiff } from '../../models/diff.models';
+import { SectionDiff, LineDiff } from '../../models/diff.models';
 
 @Component({
   selector: 'app-diff-viewer',
@@ -16,56 +16,16 @@ import { SectionDiff, LineDiff, InlineDiff } from '../../models/diff.models';
 export class DiffViewerComponent {
   sectionDiffs = input<SectionDiff[]>([]);
 
-  getStatusBadge(status: string): string {
-    switch (status) {
-      case 'equal':
-        return '=';
-      case 'modified':
-        return '≈';
-      case 'added':
-        return '+';
-      case 'removed':
-        return '-';
-      default:
-        return '?';
+  /** CSS class for each diff row */
+  getRowClass(line: LineDiff): string {
+    switch (line.type) {
+      case 'add':     return 'row-add';
+      case 'remove':  return 'row-remove';
+      case 'replace': return 'row-replace';
+      default:        return 'row-equal';
     }
   }
 
-  getStatusColor(status: string): string {
-    switch (status) {
-      case 'equal':
-        return 'gray';
-      case 'modified':
-        return 'yellow';
-      case 'added':
-        return 'green';
-      case 'removed':
-        return 'red';
-      default:
-        return 'gray';
-    }
-  }
-
-  getLineBgClass(type: string): string {
-    switch (type) {
-      case 'equal':
-        return 'line-equal';
-      case 'remove':
-        return 'line-remove';
-      case 'add':
-        return 'line-add';
-      case 'replace':
-        return 'line-replace';
-      default:
-        return '';
-    }
-  }
-
-  trackBySection(index: number): number {
-    return index;
-  }
-
-  trackByLine(index: number): number {
-    return index;
-  }
+  trackBySection(index: number): number { return index; }
+  trackByLine(index: number): number    { return index; }
 }

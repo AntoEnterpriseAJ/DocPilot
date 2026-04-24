@@ -1,166 +1,142 @@
-.diff-container {
-  margin: 2rem 0;
-}
+// ── Continuous document viewer with inline diff highlights ────────────────────
 
-.section-block {
-  margin-bottom: 2rem;
+$page-bg:      #ffffff;
+$page-text:    #1f2333;
+$page-muted:   #6e7781;
+$page-border:  #d0d7de;
+
+$add-bg:       #dafbe1;
+$add-color:    #116329;
+$add-word-bg:  #aceebb;
+
+$rem-bg:       #ffebe9;
+$rem-color:    #82071e;
+$rem-word-bg:  #ff818266;
+
+$heading-border: #d0d7de;
+
+// ── Outer wrapper ─────────────────────────────────────────────────────────────
+
+.doc-viewer {
+  background: $page-bg;
+  border: 1px solid $page-border;
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem 3rem;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 0.97rem;
+  line-height: 1.8;
+  color: $page-text;
+  max-width: 860px;
+  margin: 0 auto;
+
+  @media (max-width: 700px) {
+    padding: 1.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
 }
 
-.section-header {
-  padding: 1rem;
+// ── Section headings (part of the document flow) ──────────────────────────────
+
+.section-heading {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: white;
-  font-family: 'Fraunces', serif;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 2rem 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid $heading-border;
 
-  &.status-equal {
-    background: #e8e8e8;
-    color: #1f2333;
-  }
+  &:first-child { margin-top: 0; }
 
-  &.status-modified {
-    background: #fff3cd;
-    color: #1f2333;
-  }
-
-  &.status-added {
-    background: #d4edda;
-    color: #1f2333;
-  }
-
-  &.status-removed {
-    background: #f8d7da;
-    color: #1f2333;
-  }
-
-  .status-badge {
-    font-weight: bold;
-    font-size: 1.25rem;
-  }
-
-  h3 {
-    flex: 1;
-    margin: 0;
-    font-size: 1.1rem;
-  }
-
-  .status-label {
-    font-size: 0.85rem;
-    opacity: 0.8;
-  }
+  &[data-status='added']    { border-bottom-color: #2da44e; }
+  &[data-status='removed']  { border-bottom-color: #cf222e; }
+  &[data-status='modified'] { border-bottom-color: #9a6700; }
 }
 
-.diff-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'Space Grotesk', monospace;
-  font-size: 0.9rem;
-
-  tbody tr {
-    &.line-equal {
-      background: #fafafa;
-    }
-
-    &.line-add {
-      background: #e6ffed;
-    }
-
-    &.line-remove {
-      background: #ffeef0;
-    }
-
-    &.line-replace {
-      background: #fff8f0;
-    }
-
-    &:hover {
-      background-color: #f5f5f5;
-    }
-  }
-
-  td {
-    padding: 0.5rem;
-    border-right: 1px solid #ddd;
-    vertical-align: top;
-
-    &:last-child {
-      border-right: none;
-    }
-  }
+.section-heading-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: $page-text;
+  letter-spacing: 0.01em;
 }
 
-.line-number {
-  width: 4rem;
-  text-align: right;
-  color: #999;
-  background: #fafafa;
-  user-select: none;
-  font-size: 0.85rem;
+.section-pill {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 
-  &.old-line-no {
-    border-right: 1px solid #ddd;
-  }
+  &.pill-added    { background: $add-bg;     color: $add-color; }
+  &.pill-removed  { background: $rem-bg;     color: $rem-color; }
+  &.pill-modified { background: #fff8c5;     color: #7d4e00; }
 }
 
-.line-content {
-  word-break: break-word;
+// ── Document lines (rendered as <p> tags) ─────────────────────────────────────
+
+.doc-line {
+  margin: 0;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
   white-space: pre-wrap;
-  overflow-x: auto;
-
-  .prefix {
-    font-weight: bold;
-    margin-right: 0.25rem;
-    display: inline-block;
-    width: 1rem;
-    text-align: center;
-
-    &.prefix-add {
-      color: #28a745;
-    }
-
-    &.prefix-remove {
-      color: #dc3545;
-    }
-
-    &.prefix-replace {
-      color: #ffc107;
-    }
-  }
-
-  .inline-equal {
-    // No special styling
-  }
-
-  .inline-add {
-    background: #acf2bd;
-    font-weight: bold;
-  }
-
-  .inline-remove {
-    background: #fdb8c0;
-    font-weight: bold;
-    text-decoration: line-through;
-  }
+  word-break: break-word;
 }
+
+// Equal lines: completely invisible — just normal document text
+.line-equal {
+  color: $page-text;
+  background: transparent;
+}
+
+// Added line: subtle green wash over the whole line
+.line-add {
+  background: $add-bg;
+  color: $add-color;
+}
+
+// Removed line: subtle red wash + strikethrough
+.line-remove {
+  background: $rem-bg;
+  color: $rem-color;
+  text-decoration: line-through;
+  text-decoration-color: rgba($rem-color, 0.5);
+}
+
+// Replace line: no row background — let tokens carry the color
+.line-replace {
+  background: transparent;
+  color: $page-text;
+}
+
+// ── Inline word tokens (inside replace lines) ─────────────────────────────────
+
+.tok-equal {
+  color: $page-text;
+}
+
+.tok-add {
+  background: $add-word-bg;
+  color: $add-color;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.tok-remove {
+  background: $rem-word-bg;
+  color: $rem-color;
+  border-radius: 2px;
+  padding: 0 2px;
+  text-decoration: line-through;
+  text-decoration-color: rgba($rem-color, 0.6);
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
-  color: #999;
+  color: $page-muted;
   font-family: 'Space Grotesk', sans-serif;
-}
-
-@media (max-width: 768px) {
-  .line-number {
-    font-size: 0.75rem;
-    padding: 0.25rem;
-  }
-
-  .line-content {
-    font-size: 0.8rem;
-  }
 }

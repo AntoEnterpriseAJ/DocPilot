@@ -4,16 +4,18 @@
 
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DiffService } from '../services/diff.service';
 import { DiffUploadComponent } from '../components/diff-upload/diff-upload.component';
+import { DiffViewerComponent } from '../components/diff-viewer/diff-viewer.component';
+import { SectionDiff, DiffSummary } from '../models/diff.models';
 
 @Component({
   selector: 'app-diff-page',
   standalone: true,
   imports: [
     CommonModule,
-    DiffUploadComponent
+    DiffUploadComponent,
+    DiffViewerComponent,
   ],
   templateUrl: './diff-page.component.html',
   styleUrls: ['./diff-page.component.scss']
@@ -21,11 +23,12 @@ import { DiffUploadComponent } from '../components/diff-upload/diff-upload.compo
 export class DiffPageComponent implements OnInit {
   // Signals
   visualState = signal<'idle' | 'loading' | 'done' | 'error'>('idle');
-  visualResult = signal<{ oldPdf: SafeResourceUrl; newPdf: SafeResourceUrl } | null>(null);
+  sections = signal<SectionDiff[]>([]);
+  summary = signal<DiffSummary | null>(null);
   errorMessage = signal<string | null>(null);
   serviceOnline = signal<boolean | null>(null);
 
-  constructor(private diffService: DiffService, private sanitizer: DomSanitizer) {}
+  constructor(private diffService: DiffService) {}
 
   ngOnInit(): void {
     this.diffService.health().subscribe({
@@ -40,27 +43,27 @@ export class DiffPageComponent implements OnInit {
   onFilesSelected(files: { fileOld: File; fileNew: File }) {
     this.visualState.set('loading');
     this.errorMessage.set(null);
-    this.visualResult.set(null);
+    this.sections.set([]);
+    this.summary.set(null);
 
-    this.diffService.visualCompare(files.fileOld, files.fileNew).subscribe({
+    this.diffService.compare(files.fileOld, files.fileNew).subscribe({
       next: (res) => {
-        const oldUrl = this.sanitizer.bypassSecurityTrustResourceUrl('data:application/pdf;base64,' + res.annotated_old_pdf_base64);
-        const newUrl = this.sanitizer.bypassSecurityTrustResourceUrl('data:application/pdf;base64,' + res.annotated_new_pdf_base64);
-        this.visualResult.set({ oldPdf: oldUrl, newPdf: newUrl });
+        this.sections.set(res.sections);
+        this.summary.set(res.summary);
         this.visualState.set('done');
       },
       error: (err) => {
-        console.error('Visual Diff error:', err);
-        this.errorMessage.set('Failed to generate visual diff');
+        console.error('Diff error:', err);
+        this.errorMessage.set('Failed to generate diff. Make sure the diff service is running.');
         this.visualState.set('error');
       }
     });
   }
 
   resetResults() {
-    this.visualResult.set(null);
+    this.sections.set([]);
+    this.summary.set(null);
     this.visualState.set('idle');
     this.errorMessage.set(null);
   }
 }
-

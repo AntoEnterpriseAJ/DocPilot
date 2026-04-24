@@ -1,60 +1,52 @@
-<div class="diff-container">
-  <div *ngFor="let section of sectionDiffs(); trackBy: trackBySection" class="section-block">
-    <div class="section-header" [ngClass]="'status-' + section.status">
-      <span class="status-badge">{{ getStatusBadge(section.status) }}</span>
-      <h3>{{ section.name }}</h3>
-      <span class="status-label">{{ section.status }}</span>
+<!-- Single continuous document view — changes highlighted inline -->
+<div class="doc-viewer" *ngIf="sectionDiffs().length > 0; else emptyState">
+
+  <ng-container *ngFor="let section of sectionDiffs(); trackBy: trackBySection">
+
+    <!-- Section heading (always shown as part of the document flow) -->
+    <div class="section-heading" [attr.data-status]="section.status">
+      <span class="section-heading-text">{{ section.name }}</span>
+      <span class="section-pill" *ngIf="section.status !== 'equal'" [ngClass]="'pill-' + section.status">
+        {{ section.status }}
+      </span>
     </div>
 
-    <table class="diff-table">
-      <tbody>
-        <tr
-          *ngFor="let line of section.lines; trackBy: trackByLine"
-          [ngClass]="getLineBgClass(line.type)"
-        >
-          <!-- Old line number -->
-          <td class="line-number old-line-no">
-            {{ line.old_line_no }}
-          </td>
+    <!-- Lines flow as paragraphs, not table rows -->
+    <ng-container *ngFor="let line of section.lines; trackBy: trackByLine">
 
-          <!-- New line number -->
-          <td class="line-number new-line-no">
-            {{ line.new_line_no }}
-          </td>
+      <!-- Equal: plain text -->
+      <p *ngIf="line.type === 'equal'" class="doc-line line-equal">
+        {{ line.new_text ?? '' }}
+      </p>
 
-          <!-- Line content with inline diff -->
-          <td class="line-content">
-            <!-- Simple line (equal, add, remove) -->
-            <ng-container *ngIf="line.type !== 'replace'">
-              <span class="prefix" [ngClass]="'prefix-' + line.type">
-                {{ line.type === 'remove' ? '−' : line.type === 'add' ? '+' : ' ' }}
-              </span>
-              <span>{{ line.old_text || line.new_text || '' }}</span>
-            </ng-container>
+      <!-- Added: full line green highlight -->
+      <p *ngIf="line.type === 'add'" class="doc-line line-add">
+        {{ line.new_text ?? '' }}
+      </p>
 
-            <!-- Replace line with inline diff -->
-            <ng-container *ngIf="line.type === 'replace'">
-              <span class="prefix prefix-replace">~</span>
-              <ng-container *ngIf="line.inline_diff && line.inline_diff.length > 0">
-                <span
-                  *ngFor="let inlineDiff of line.inline_diff"
-                  [ngClass]="'inline-' + inlineDiff.type"
-                >
-                  {{ inlineDiff.text }}
-                </span>
-              </ng-container>
-              <ng-container *ngIf="!line.inline_diff || line.inline_diff.length === 0">
-                {{ line.new_text || '' }}
-              </ng-container>
-            </ng-container>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <!-- Removed: full line red, struck through -->
+      <p *ngIf="line.type === 'remove'" class="doc-line line-remove">
+        {{ line.old_text ?? '' }}
+      </p>
 
-  <!-- Empty state -->
-  <div *ngIf="sectionDiffs().length === 0" class="empty-state">
-    <p>No diffs available. Upload and compare documents to see results.</p>
-  </div>
+      <!-- Replace: inline word-level tokens, flows as one paragraph -->
+      <p *ngIf="line.type === 'replace'" class="doc-line line-replace">
+        <ng-container *ngIf="line.inline_diff && line.inline_diff.length > 0; else plainReplace">
+          <ng-container *ngFor="let token of line.inline_diff">
+            <span *ngIf="token.type === 'equal'"  class="tok-equal">{{ token.text }}</span>
+            <span *ngIf="token.type === 'add'"    class="tok-add">{{ token.text }}</span>
+            <span *ngIf="token.type === 'remove'" class="tok-remove">{{ token.text }}</span>
+          </ng-container>
+        </ng-container>
+        <ng-template #plainReplace>{{ line.new_text ?? '' }}</ng-template>
+      </p>
+
+    </ng-container>
+
+  </ng-container>
+
 </div>
+
+<ng-template #emptyState>
+  <div class="empty-state">No differences found. Upload two documents to compare.</div>
+</ng-template>

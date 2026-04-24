@@ -18,7 +18,7 @@
     <button (click)="resetResults()">Dismiss</button>
   </div>
 
-  <!-- Upload section — only enabled when service is online (or status unknown) -->
+  <!-- Upload section -->
   <app-diff-upload
     *ngIf="visualState() === 'idle'"
     [disabled]="serviceOnline() === false"
@@ -28,25 +28,34 @@
   <!-- Loading state -->
   <div *ngIf="visualState() === 'loading'" class="loading-box">
     <div class="spinner"></div>
-    <p>Generating visual diff... (this may take a moment)</p>
+    <p>Generating diff… this may take a moment</p>
   </div>
 
   <!-- Results -->
-  <div *ngIf="visualState() === 'done' && visualResult()" class="results-section">
-    <button class="reset-btn" (click)="resetResults()">← Start Over</button>
+  <div *ngIf="visualState() === 'done'" class="results-section">
 
-    <!-- Visual Diff Section -->
-    <div class="visual-diff-section" style="margin-top: 1rem;">
-      <div class="visual-viewer">
-        <div class="pdf-panel">
-          <h3>Original (Removed items in <span style="color:red">Red</span>)</h3>
-          <iframe [src]="visualResult()!.oldPdf" width="100%" height="800px" frameborder="0"></iframe>
-        </div>
-        <div class="pdf-panel">
-          <h3>New (Added items in <span style="color:green">Green</span>)</h3>
-          <iframe [src]="visualResult()!.newPdf" width="100%" height="800px" frameborder="0"></iframe>
-        </div>
+    <!-- Toolbar -->
+    <div class="diff-toolbar">
+      <button class="reset-btn" (click)="resetResults()">← Compare Again</button>
+
+      <!-- Summary chips -->
+      <div class="summary-chips" *ngIf="summary()">
+        <span class="chip chip-modified" *ngIf="summary()!.modified">
+          ~ {{ summary()!.modified }} modified
+        </span>
+        <span class="chip chip-added" *ngIf="summary()!.added">
+          + {{ summary()!.added }} added
+        </span>
+        <span class="chip chip-removed" *ngIf="summary()!.removed">
+          − {{ summary()!.removed }} removed
+        </span>
+        <span class="chip chip-unchanged" *ngIf="summary()!.unchanged">
+          = {{ summary()!.unchanged }} unchanged
+        </span>
       </div>
     </div>
+
+    <!-- GitHub-style diff viewer -->
+    <app-diff-viewer [sectionDiffs]="sections()"></app-diff-viewer>
   </div>
 </div>
