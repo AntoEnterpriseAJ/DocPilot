@@ -41,4 +41,15 @@ export class DiffService {
   health(): Observable<{ status: string }> {
     return this.http.get<{ status: string }>(`${this.apiUrl}/health`);
   }
+
+  /**
+   * Visually compare two PDF documents.
+   */
+  visualCompare(fileOld: File, fileNew: File): Observable<{ annotated_old_pdf_base64: string; annotated_new_pdf_base64: string }> {
+    const formData = new FormData();
+    formData.append('file_old', fileOld);
+    formData.append('file_new', fileNew);
+
+    return this.http.post<{ annotated_old_pdf_base64: string; annotated_new_pdf_base64: string }>(`${this.apiUrl}/visual`, formData);
+  }
 }

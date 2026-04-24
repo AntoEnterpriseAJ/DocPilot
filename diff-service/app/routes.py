@@ -9,6 +9,7 @@ from config import (
     FLASK_DEBUG
 )
 from app.models.response import DiffResponse, DiffSummary
+from app.core.visual_differ import VisualDiffer
 
 diff_bp = Blueprint("diff", __name__, url_prefix="/api/diff")
 
@@ -102,6 +103,33 @@ def diff_documents():
         # Expected input/data errors should be surfaced as client errors.
         return {"error": str(e)}, 400
     
+    except Exception as e:
+        if FLASK_DEBUG:
+            import traceback
+            traceback.print_exc()
+        return {"error": str(e)}, 500
+
+@diff_bp.route("/visual", methods=["POST"])
+def diff_visual():
+    """
+    Compare two PDF documents visually.
+    Returns base64 encoded annotated PDFs.
+    """
+    try:
+        if "file_old" not in request.files or "file_new" not in request.files:
+            return {"error": "Missing files: file_old, file_new"}, 400
+        
+        file_old = request.files["file_old"]
+        file_new = request.files["file_new"]
+        
+        if file_old.filename == "" or file_new.filename == "":
+            return {"error": "Empty filenames"}, 400
+            
+        differ = VisualDiffer()
+        result = differ.diff(file_old.read(), file_new.read())
+        
+        return jsonify(result), 200
+        
     except Exception as e:
         if FLASK_DEBUG:
             import traceback
