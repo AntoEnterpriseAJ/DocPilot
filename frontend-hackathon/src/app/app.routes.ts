@@ -29,6 +29,13 @@ export const routes: Routes = [
       )
   },
   {
+    path: 'copilot',
+    loadComponent: () =>
+      import('./copilot/copilot-page/copilot-page.component').then(
+        (m) => m.CopilotPageComponent,
+      )
+  },
+  {
     path: '**',
     redirectTo: ''
   }
