@@ -9,11 +9,21 @@ diff-service/.mypy_cache/
 diff-service/.ruff_cache/
 
 # Backend: local env/config and logs
+.env
+.env.*
 diff-service/.env
 diff-service/.env.*
+backend/.env
+backend/.env.*
 diff-service/*.log
 diff-service/coverage/
 diff-service/htmlcov/
+
+# Runtime / debug artifacts
+logs/
+backend/_req.json
+backend/mock-data/pdf-ia-matching/_pi_text.txt
+smoke_test.docx
 
 # Backend: OS/editor noise
 diff-service/.DS_Store
