@@ -360,6 +360,13 @@ def extract_from_images(page_images: list[str]) -> dict:
 # ---------------------------------------------------------------------------
 # Markdown generation
 # ---------------------------------------------------------------------------
+#
+# DEV-ONLY UTILITIES. These functions are not invoked by any HTTP route.
+# They exist for `backend/generate_mock_markdown.py` (a one-off CLI used to
+# pre-generate `mock-data/*.parsed.md`) and for future on-demand markdown
+# rendering. Do not call them from request handlers — they cost a full
+# Claude round-trip on top of structured extraction and the runtime app
+# never reads the resulting markdown.
 
 _MARKDOWN_SYSTEM_PROMPT = (
     "You are an expert document parser specialized in converting Romanian academic and administrative "
