@@ -42,7 +42,7 @@ def render_fd_docx(
     _fill_section_2_discipline(doc, draft)
     _fill_section_3_hours(doc, draft)
     _fill_section_6_competencies(doc, draft)
-    _fill_section_12_approvals(doc, plan_meta)
+    apply_admin_fields(doc, plan_meta)
 
     buf = io.BytesIO()
     doc.save(buf)
@@ -185,6 +185,15 @@ def _format_competency_block(entries: list[SelectedCompetency]) -> list[str]:
     if lines and lines[-1] == "":
         lines.pop()
     return lines
+
+
+def apply_admin_fields(doc, plan_meta: dict) -> None:
+    """Public entry point used by both the FD drafter and the Template Shifter.
+
+    Currently delegates to the section-12 approvals filler; future admin
+    fields can layer on top here without touching call sites.
+    """
+    _fill_section_12_approvals(doc, plan_meta or {})
 
 
 def _fill_section_12_approvals(doc, plan_meta: dict) -> None:
