@@ -33,6 +33,15 @@ export interface CaseTab {
   body: TabKind;
 }
 
+/** Mock edit proposal — single-field change rendered as a git diff. */
+export interface EditProposal {
+  field: string;          // e.g. "numar_credite" or "bibliografie[3]"
+  oldValue: string;
+  newValue: string;
+  summary?: string;       // short human description
+  status?: 'pending' | 'applied' | 'rejected';
+}
+
 /** Minimal chat message shape. Persistence is in-memory for v1. */
 export interface ChatMessage {
   id: string;
@@ -43,24 +52,9 @@ export interface ChatMessage {
   /** Optional inline actions rendered as buttons next to the message. */
   actions?: ChatAction[];
   contextChips?: string[];
-  /** Proposed structured edits (assistant messages only). */
+  /** Optional inline edit proposal rendered as a tiny git-diff card. */
   editProposal?: EditProposal;
   ts: number;
-}
-
-export interface EditPatch {
-  op: 'set' | 'add' | 'remove';
-  field_key: string;
-  new_value?: unknown;
-  reason?: string;
-}
-
-export interface EditProposal {
-  summary: string;
-  doc_id: string | null;
-  patches: EditPatch[];
-  /** UI state: 'pending' | 'applied' | 'rejected'. */
-  status: 'pending' | 'applied' | 'rejected';
 }
 
 export type ChatAction =
@@ -221,7 +215,8 @@ export class CaseStore {
     return m;
   }
 
-  updateChat(id: string, patch: Partial<ChatMessage>): void {
+  /** Patch an existing chat message (e.g. mark a proposal applied/rejected). */
+  updateChatMessage(id: string, patch: Partial<ChatMessage>): void {
     this._chat.update((arr) =>
       arr.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     );

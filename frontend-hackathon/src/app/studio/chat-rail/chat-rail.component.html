@@ -31,47 +31,34 @@
           <div class="bubble">
             <div class="role">{{ m.role === 'user' ? '🧑' : '🤖' }}</div>
             @if (m.role === 'assistant') {
-              <div class="text md" [innerHTML]="renderMarkdown(m.text)"></div>
-              @if (m.editProposal; as ep) {
-                <div class="edit-card" [class.applied]="ep.status === 'applied'" [class.rejected]="ep.status === 'rejected'">
-                  <div class="edit-card-head">
-                    <span class="edit-icon">✎</span>
-                    <span class="edit-summary">{{ ep.summary || 'Modificări propuse' }}</span>
-                    <span class="edit-count">{{ ep.patches.length }}</span>
-                  </div>
-                  <ul class="edit-diff">
-                    @for (p of ep.patches; track $index) {
-                      <li class="edit-row">
-                        <span class="edit-op edit-op-{{ p.op }}">{{ opLabel(p.op) }}</span>
-                        <span class="edit-key">{{ p.field_key }}</span>
-                        @if (p.op !== 'add') {
-                          <div class="edit-line edit-old">
-                            <span class="edit-marker">−</span>
-                            <span class="edit-val">{{ formatValue(oldValueFor(ep, p.field_key)) }}</span>
-                          </div>
-                        }
-                        @if (p.op !== 'remove') {
-                          <div class="edit-line edit-new">
-                            <span class="edit-marker">+</span>
-                            <span class="edit-val">{{ formatValue(p.new_value) }}</span>
-                          </div>
-                        }
-                        @if (p.reason) {
-                          <div class="edit-reason">↳ {{ p.reason }}</div>
-                        }
-                      </li>
+              @if (m.text) {
+                <div class="text md" [innerHTML]="renderMarkdown(m.text)"></div>
+              }
+              @if (m.editProposal) {
+                <div class="edit-proposal" role="group" aria-label="Edit proposal">
+                  <div class="ep-head">
+                    <span class="ep-icon">✎</span>
+                    <span class="ep-field">{{ m.editProposal.field }}</span>
+                    @if (m.editProposal.summary) {
+                      <span class="ep-summary">{{ m.editProposal.summary }}</span>
                     }
-                  </ul>
-                  @if (ep.status === 'pending') {
-                    <div class="edit-actions">
-                      <button class="edit-accept" (click)="acceptProposal(m.id, ep)">✓ Aplică</button>
-                      <button class="edit-reject" (click)="rejectProposal(m.id, ep)">Renunță</button>
-                    </div>
-                  } @else if (ep.status === 'applied') {
-                    <div class="edit-status edit-status-applied">✓ Aplicat</div>
-                  } @else {
-                    <div class="edit-status edit-status-rejected">Renunțat</div>
-                  }
+                  </div>
+                  <pre class="ep-diff">@if (m.editProposal.oldValue && m.editProposal.oldValue !== '—') {<span class="ep-line del">- {{ m.editProposal.oldValue }}</span>
+}<span class="ep-line add">+ {{ m.editProposal.newValue }}</span></pre>
+                  <div class="ep-actions">
+                    @if (!m.editProposal.status || m.editProposal.status === 'pending') {
+                      <button class="ep-btn accept" (click)="acceptProposal(m.id, m.editProposal)">
+                        Aplică
+                      </button>
+                      <button class="ep-btn reject" (click)="rejectProposal(m.id, m.editProposal)">
+                        Respinge
+                      </button>
+                    } @else if (m.editProposal.status === 'applied') {
+                      <span class="ep-status applied">✓ Aplicat</span>
+                    } @else {
+                      <span class="ep-status rejected">✕ Respins</span>
+                    }
+                  </div>
                 </div>
               }
               @if (m.followups?.length) {

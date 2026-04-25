@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { CaseStore, CaseDocument, EditPatch, EditProposal } from '../case.store';
+import { CaseStore, CaseDocument, EditProposal } from '../case.store';
 import { SyncCheckService } from '../../sync-check/services/sync-check.service';
 import { ExtractedDocument } from '../../sync-check/models/sync.models';
 
@@ -76,38 +76,23 @@ export class ChatRailComponent {
       const documents: unknown[] = [];
       if (doc) {
         const parsed = await this.ensureParsed(doc);
-        if (parsed) documents.push(this.condenseForChat(doc.id, parsed));
+        if (parsed) documents.push(this.condenseForChat(parsed));
       }
 
       const resp = await firstValueFrom(
-        this.http.post<{
-          reply: string;
-          followups?: string[];
-          edit_proposal?: {
-            summary: string;
-            doc_id: string | null;
-            patches: EditPatch[];
-          } | null;
-        }>('/api/documents/chat', {
+        this.http.post<{ reply: string; followups?: string[] }>('/api/documents/chat', {
           message: text,
           documents,
         }),
       );
-
-      const editProposal: EditProposal | undefined = resp.edit_proposal
-        ? {
-            summary: resp.edit_proposal.summary,
-            // Backend may return the parsed-doc id (preferred) or null.
-            doc_id: resp.edit_proposal.doc_id || doc?.id || null,
-            patches: resp.edit_proposal.patches ?? [],
-            status: 'pending',
-          }
-        : undefined;
-
+      // MOCK: detect Romanian/English edit-intent verbs and synthesize a
+      // tiny edit-proposal so we can render the git-diff card. Pure UI mock —
+      // no patches are actually applied.
+      const editProposal = this.maybeMockEditProposal(text, doc);
       this.store.appendChat({
         role: 'assistant',
-        text: resp.reply,
-        followups: (resp.followups ?? []).slice(0, 3),
+        text: editProposal ? '' : resp.reply,
+        followups: editProposal ? [] : (resp.followups ?? []).slice(0, 3),
         editProposal,
       });
     } catch (err: unknown) {
@@ -142,7 +127,7 @@ export class ChatRailComponent {
    * (bibliography especially) to a reasonable head so we don't burn tokens or
    * trip request-size limits.
    */
-  private condenseForChat(docId: string, doc: ExtractedDocument): unknown {
+  private condenseForChat(doc: ExtractedDocument): unknown {
     const MAX_LIST = 25;
     const fields = doc.fields.map((f) => {
       if (Array.isArray(f.value) && f.value.length > MAX_LIST) {
@@ -156,7 +141,7 @@ export class ChatRailComponent {
       }
       return f;
     });
-    return { id: docId, ...doc, fields };
+    return { ...doc, fields };
   }
 
   protected quickAction(kind: 'explain' | 'improve' | 'summarize'): void {
@@ -182,88 +167,6 @@ export class ChatRailComponent {
     if (this.sending()) return;
     this.draft.set(text);
     this.send();
-  }
-
-  // --- edit-proposal handling -------------------------------------------
-
-  /** Look up the current value of a field key in the doc the proposal targets. */
-  protected oldValueFor(proposal: EditProposal, fieldKey: string): unknown {
-    const docId = proposal.doc_id;
-    if (!docId) return undefined;
-    const doc = this.store.documents().find((d) => d.id === docId);
-    const parsed = doc?.parsed as ExtractedDocument | undefined;
-    const f = parsed?.fields.find((x) => x.key === fieldKey);
-    return f?.value;
-  }
-
-  /** Render any value as a compact, single-line string for the diff card. */
-  protected formatValue(v: unknown): string {
-    if (v === undefined || v === null) return '—';
-    if (Array.isArray(v)) {
-      if (v.length === 0) return '[ ]';
-      if (v.length === 1) return String(v[0]);
-      return `[${v.length} elemente] ${String(v[0]).slice(0, 60)}…`;
-    }
-    if (typeof v === 'object') return JSON.stringify(v).slice(0, 120);
-    const s = String(v);
-    return s.length > 160 ? s.slice(0, 160) + '…' : s;
-  }
-
-  protected opLabel(op: string): string {
-    return op === 'set' ? 'MODIFICĂ' : op === 'add' ? 'ADAUGĂ' : 'ȘTERGE';
-  }
-
-  /** Apply the proposal: POST to backend, swap parsed doc on the store. */
-  protected async acceptProposal(messageId: string, proposal: EditProposal): Promise<void> {
-    if (proposal.status !== 'pending') return;
-    const docId = proposal.doc_id;
-    const doc = docId ? this.store.documents().find((d) => d.id === docId) : null;
-    if (!doc || !doc.parsed) {
-      this.store.updateChat(messageId, {
-        editProposal: { ...proposal, status: 'rejected' },
-      });
-      this.store.appendChat({
-        role: 'assistant',
-        text: '⚠ Nu am găsit documentul țintă pentru aceste modificări.',
-      });
-      return;
-    }
-    try {
-      const resp = await firstValueFrom(
-        this.http.post<{
-          doc: ExtractedDocument;
-          applied: EditPatch[];
-          skipped: { patch: EditPatch; reason: string }[];
-        }>('/api/documents/apply-patches', {
-          doc: doc.parsed,
-          patches: proposal.patches,
-        }),
-      );
-      this.store.updateDocument(doc.id, { parsed: resp.doc });
-      this.store.updateChat(messageId, {
-        editProposal: { ...proposal, status: 'applied' },
-      });
-      const skippedNote = resp.skipped.length
-        ? ` (${resp.skipped.length} ignorate: ${resp.skipped.map((s) => s.reason).join(', ')})`
-        : '';
-      this.store.appendChat({
-        role: 'assistant',
-        text: `✓ Am aplicat ${resp.applied.length} modificare/i pe „${doc.name}”.${skippedNote}`,
-      });
-    } catch (err: unknown) {
-      const e = err as { error?: { detail?: string }; message?: string };
-      this.store.appendChat({
-        role: 'assistant',
-        text: `⚠ Nu am putut aplica modificările: ${e?.error?.detail || e?.message || 'eroare'}`,
-      });
-    }
-  }
-
-  protected rejectProposal(messageId: string, proposal: EditProposal): void {
-    if (proposal.status !== 'pending') return;
-    this.store.updateChat(messageId, {
-      editProposal: { ...proposal, status: 'rejected' },
-    });
   }
 
   /**
@@ -331,5 +234,86 @@ export class ChatRailComponent {
 
   protected toggleCollapse(): void {
     this.collapsed.update((c) => !c);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mock edit-proposal (UI-only, no backend wiring yet)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Detect simple "schimbă X la Y" / "change X to Y" patterns and synthesize
+   * a fake EditProposal so we can demo the inline git-diff card without the
+   * backend tool yet. Returns undefined when the message doesn't look like an
+   * edit request.
+   */
+  private maybeMockEditProposal(
+    userText: string,
+    doc: CaseDocument | null,
+  ): EditProposal | undefined {
+    const verbs = /(schimb[ăa]|modific[ăa]|actualizeaz[ăa]|redenume[șs]te|change|update|set|rename)/i;
+    if (!verbs.test(userText)) return undefined;
+
+    // Pattern A: "<verb> ... <field>: <old> (la|to|în) <new>"  (colon form)
+    // Pattern B: "<verb> ... <field-phrase> (la|to|în) <new>"   (no old value given)
+    const colonMatch =
+      /(?:schimb[ăa]|modific[ăa]|actualizeaz[ăa]|redenume[șs]te|change|update|set|rename)\s+(?:.*?\b)?([a-zăâîșț_][\w ăâîșț_-]{1,80}?)\s*[:\-—]\s*(.+?)\s+(?:la|to|=>?|[îi]n)\s+(.+?)\s*\.?$/iu.exec(
+        userText,
+      );
+    const plainMatch = colonMatch ? null :
+      /(?:schimb[ăa]|modific[ăa]|actualizeaz[ăa]|redenume[șs]te|change|update|set|rename)\s+(?:.*?\b)?([a-zăâîșț_][\w ăâîșț_-]{1,80}?)\s+(?:la|to|=>?|[îi]n)\s+(.+?)\s*\.?$/iu.exec(
+        userText,
+      );
+
+    const fieldPhrase = ((colonMatch?.[1] ?? plainMatch?.[1]) ?? 'numar_credite')
+      .trim().toLowerCase();
+    const oldFromText = colonMatch?.[2]?.trim().replace(/^["„]|["”]$/g, '') ?? '';
+    const newValue = ((colonMatch?.[3] ?? plainMatch?.[2]) ?? '5')
+      .trim().replace(/^["„]|["”]$/g, '');
+
+    // Map common phrases → canonical field name. First match wins.
+    const phraseAlias: { test: RegExp; field: string }[] = [
+      { test: /(nume|name|denumire).*(curs|course|discipli|materi)/, field: 'nume_disciplina' },
+      { test: /(curs|course|discipli|materi).*(nume|name|denumire)/, field: 'nume_disciplina' },
+      { test: /^(nume|name|denumire|curs|course|discipli|materi)/, field: 'nume_disciplina' },
+      { test: /(num[ăa]r.*credit|^credite$|^credits$)/, field: 'numar_credite' },
+      { test: /titular.*(curs|course)/, field: 'titular_curs' },
+      { test: /titular.*seminar/, field: 'titular_seminar' },
+      { test: /(semestr|semester)/, field: 'semestru' },
+    ];
+    let field = fieldPhrase.replace(/\s+/g, '_');
+    for (const a of phraseAlias) {
+      if (a.test.test(fieldPhrase)) { field = a.field; break; }
+    }
+
+    // Prefer explicit old value from text; otherwise look it up in the parsed doc.
+    let oldValue = oldFromText;
+    if (!oldValue) {
+      const parsed = doc?.parsed as { fields?: { name?: string; value?: unknown }[] } | undefined;
+      const found = parsed?.fields?.find((f) => (f.name ?? '').toLowerCase() === field);
+      if (found && found.value != null) {
+        oldValue = Array.isArray(found.value)
+          ? `[${found.value.length} entries]`
+          : String(found.value);
+      }
+    }
+
+    return {
+      field,
+      oldValue,
+      newValue,
+      summary: `Modificare propusă pentru "${field}"`,
+    };
+  }
+
+  protected acceptProposal(msgId: string, proposal: EditProposal): void {
+    this.store.updateChatMessage(msgId, {
+      editProposal: { ...proposal, status: 'applied' },
+    });
+  }
+
+  protected rejectProposal(msgId: string, proposal: EditProposal): void {
+    this.store.updateChatMessage(msgId, {
+      editProposal: { ...proposal, status: 'rejected' },
+    });
   }
 }
