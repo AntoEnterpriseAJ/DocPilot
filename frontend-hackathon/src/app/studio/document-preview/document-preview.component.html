@@ -1,0 +1,31 @@
+@let d = doc();
+@if (!d) {
+  <div class="missing">Document was removed.</div>
+} @else {
+  <div class="doc-preview">
+    <header class="bar">
+      <div class="meta">
+        <strong>{{ d.name }}</strong>
+        <span class="muted">· {{ formatBytes(d.file.size) }} · {{ d.kind }}</span>
+      </div>
+      <button (click)="download()">⬇ Download</button>
+    </header>
+
+    @if (isPdf() && previewUrl()) {
+      <iframe class="pdf-frame" [src]="previewUrl()" title="PDF preview"></iframe>
+    } @else if (isDocx()) {
+      <div class="docx-card">
+        <p>📄 DOCX preview is not yet available in v1.</p>
+        <p class="muted">
+          Use this document as input to <strong>Migrate</strong>,
+          <strong>Validate</strong>, or <strong>Sync</strong>; or download it
+          to view in Word.
+        </p>
+      </div>
+    } @else {
+      <div class="docx-card">
+        <p>No preview available for this file type.</p>
+      </div>
+    }
+  </div>
+}

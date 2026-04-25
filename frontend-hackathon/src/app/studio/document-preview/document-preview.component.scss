@@ -1,0 +1,57 @@
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.doc-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+
+  .meta { flex: 1; font-size: 13px; }
+  .muted { color: #6b7280; }
+
+  button {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font: inherit;
+    &:hover { background: #4f46e5; }
+  }
+}
+
+.pdf-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  min-height: 0;
+}
+
+.docx-card {
+  padding: 24px;
+  color: #4b5563;
+
+  p { margin: 4px 0; }
+  .muted { color: #6b7280; }
+}
+
+.missing {
+  padding: 24px;
+  color: #9ca3af;
+}

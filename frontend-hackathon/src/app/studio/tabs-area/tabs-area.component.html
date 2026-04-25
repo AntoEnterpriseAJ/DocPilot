@@ -1,0 +1,52 @@
+<div class="tabs-area">
+  @if (store.tabs().length > 0) {
+    <div class="tab-strip">
+      @for (t of store.tabs(); track t.id) {
+        <div
+          class="tab"
+          [class.active]="t.id === store.activeTabId()"
+          (click)="onTabClick(t.id)"
+        >
+          <span class="tab-icon">{{ t.icon }}</span>
+          <span class="tab-title">{{ t.title }}</span>
+          <button class="tab-x" (click)="onTabClose($event, t.id)">×</button>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="tab-body">
+    @let active = store.activeTab();
+    @if (!active) {
+      <div class="empty-state">
+        <div class="hero">
+          <div class="big-icon">⤓</div>
+          <h2>Drop your documents here</h2>
+          <p>Or use the Explorer on the left to add files. Accepted: .pdf · .docx</p>
+          <p class="hint">Pick a tool from the Explorer once you have docs in the Case.</p>
+          <p class="hint">Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to open the command palette.</p>
+        </div>
+      </div>
+    } @else if (active.body.kind === 'document') {
+      <app-document-preview [documentId]="active.body.documentId"></app-document-preview>
+    } @else if (active.body.tool === 'migrate') {
+      <app-migrate-tool></app-migrate-tool>
+    } @else if (active.body.tool === 'sync') {
+      <app-sync-tool></app-sync-tool>
+    } @else if (active.body.tool === 'validate') {
+      <app-validate-tool></app-validate-tool>
+    } @else if (active.body.tool === 'draft') {
+      <app-draft-tool></app-draft-tool>
+    } @else if (active.body.tool === 'diff') {
+      <app-diff-tool></app-diff-tool>
+    } @else {
+      <section class="placeholder">
+        <h3>{{ active.icon }} {{ active.title }}</h3>
+        <p class="muted">
+          The <strong>{{ active.body.tool }}</strong> tool is not yet
+          embedded — coming in a later phase.
+        </p>
+      </section>
+    }
+  </div>
+</div>

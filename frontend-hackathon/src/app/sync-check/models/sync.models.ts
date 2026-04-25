@@ -78,6 +78,19 @@ export interface CompetencyMapping {
   summary: string;
 }
 
+/** UC 1.1 — Structural field validation result from /api/documents/validate. */
+export interface SuggestionOption {
+  code: string;
+  label: string;
+  patch: Record<string, unknown>;
+}
+
+export interface StructuralValidationResult {
+  status: 'valid' | 'invalid';
+  violations: GuardViolation[];
+  suggestions: SuggestionOption[];
+}
+
 /** UC 1.2 — Numeric consistency report. */
 export interface NumericIssue {
   severity: 'error' | 'warning' | 'info';

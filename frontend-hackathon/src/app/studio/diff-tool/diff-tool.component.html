@@ -1,0 +1,142 @@
+<section class="tool">
+  <header class="inputs">
+    <label class="chip">
+      <span class="chip-label">Type</span>
+      <select [value]="parserType()" (change)="onPickParser($event)">
+        <option value="fd">📄 Fișă disciplină</option>
+        <option value="pi">📋 Plan învățământ</option>
+      </select>
+    </label>
+    <label class="chip">
+      <span class="chip-label">Old</span>
+      <select [value]="oldId() ?? ''" (change)="onPickOld($event)">
+        <option value="">— pick a document —</option>
+        @for (d of options(); track d.id) {
+          <option [value]="d.id">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="chip">
+      <span class="chip-label">New</span>
+      <select [value]="newId() ?? ''" (change)="onPickNew($event)">
+        <option value="">— pick a document —</option>
+        @for (d of options(); track d.id) {
+          <option [value]="d.id">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+  </header>
+
+  <div class="action-bar">
+    <button class="primary" [disabled]="!canRun()" (click)="run()">
+      {{ running() ? 'Comparing…' : '🔍 Compare' }}
+    </button>
+    @if (result()) {
+      <button class="secondary" [disabled]="explaining()" (click)="explain()">
+        {{ explaining() ? 'Explaining…' : '🧠 Explain changes' }}
+      </button>
+    }
+    @if (result(); as r) {
+      <span class="badge">
+        {{ r.summary.modified }} modified · {{ r.summary.added }} added ·
+        {{ r.summary.removed }} removed · {{ r.summary.logic_changes_count }} logic
+      </span>
+    }
+  </div>
+
+  @if (error(); as e) {
+    <div class="error">⚠ {{ e }}</div>
+  }
+
+  @if (narrativeError(); as e) {
+    <div class="error">⚠ Narrative: {{ e }}</div>
+  }
+
+  @if (running()) {
+    <div class="progress">Comparing documents…</div>
+  }
+
+  @if (explaining()) {
+    <div class="progress">Generating human-language summary…</div>
+  }
+
+  @if (narrative(); as n) {
+    <section class="narrative">
+      <h4>🧠 Narrative</h4>
+      <p>{{ n.narrative }}</p>
+      @if (n.key_changes.length) {
+        <h5>Key changes</h5>
+        <ul class="key-list">
+          @for (k of n.key_changes; track $index) {<li>{{ k }}</li>}
+        </ul>
+      }
+      @if (n.action_items.length) {
+        <h5>Action items</h5>
+        <ul class="action-list">
+          @for (a of n.action_items; track $index) {<li>{{ a }}</li>}
+        </ul>
+      }
+    </section>
+  }
+
+  @if (result(); as r) {
+    <div class="report">
+      <h4>Summary</h4>
+      <div class="grid">
+        <div><strong>{{ r.summary.total_sections }}</strong><span>sections</span></div>
+        <div><strong>{{ r.summary.modified }}</strong><span>modified</span></div>
+        <div><strong>{{ r.summary.added }}</strong><span>added</span></div>
+        <div><strong>{{ r.summary.removed }}</strong><span>removed</span></div>
+        <div><strong>{{ r.summary.unchanged }}</strong><span>unchanged</span></div>
+      </div>
+
+      @if (r.logic_changes.length > 0) {
+        <h4>Logic changes ({{ r.logic_changes.length }})</h4>
+        <ul class="logic-list">
+          @for (c of r.logic_changes; track $index) {
+            <li [class]="severityClass(c)">
+              <span class="sev">{{ c.severity }}</span>
+              <span class="type">{{ c.type }}</span>
+              <span class="desc">{{ c.description }}</span>
+              @if (c.old_value || c.new_value) {
+                <span class="meta">{{ c.old_value }} → {{ c.new_value }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+
+      @if (r.sections.length > 0) {
+        <h4>Section diffs</h4>
+        <div class="diff-controls">
+          <label><input type="checkbox" [checked]="showUnchanged()" (change)="toggleUnchanged($event)" /> Show unchanged sections</label>
+        </div>
+        @for (s of visibleSections(); track s.name) {
+          <details class="diff-file" [open]="s.status !== 'equal'">
+            <summary class="diff-file-header status-{{ s.status }}">
+              <span class="status-tag">{{ s.status }}</span>
+              <span class="file-name">{{ s.name }}</span>
+              <span class="file-meta">{{ countAdds(s) }} additions, {{ countRemoves(s) }} deletions</span>
+            </summary>
+            <div class="diff-body">
+              @for (ln of expandLines(s.lines); track $index) {
+                <div class="diff-line type-{{ ln.kind }}">
+                  <span class="ln old">{{ ln.oldNo ?? '' }}</span>
+                  <span class="ln new">{{ ln.newNo ?? '' }}</span>
+                  <span class="sigil">{{ ln.sigil }}</span>
+                  <span class="text">@if (ln.inline && ln.inline.length) {
+                    @for (seg of ln.inline; track $index) {<span class="seg seg-{{ seg.type }}">{{ seg.text }}</span>}
+                  } @else {{{ ln.text }}}</span>
+                </div>
+              }
+            </div>
+          </details>
+        }
+      }
+    </div>
+  } @else if (!running() && !error()) {
+    <div class="hint">
+      Pick two documents of the same type, then Compare. Requires diff service running on :5000.
+    </div>
+  }
+</section>

@@ -1,0 +1,65 @@
+<div class="tool draft-tool">
+  <header class="inputs">
+    <span class="label">Inputs:</span>
+    <label class="chip">
+      <span class="chip-label">📕 Plan</span>
+      <select (change)="onPickPlan($event)">
+        <option value="">— pick —</option>
+        @for (d of planOptions(); track d.id) {
+          <option [value]="d.id" [selected]="d.id === planId()">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="chip">
+      <span class="chip-label">Course</span>
+      <input
+        type="text"
+        placeholder="e.g. Analiza matematică"
+        [ngModel]="courseName()"
+        (ngModelChange)="courseName.set($event)"
+      />
+    </label>
+    <label class="chip">
+      <input
+        type="checkbox"
+        [checked]="useClaude()"
+        (change)="useClaude.set($any($event.target).checked)"
+      />
+      <span class="chip-label">Use Claude</span>
+    </label>
+  </header>
+
+  <div class="action-bar">
+    <button class="primary" [disabled]="!planId() || listing()" (click)="loadCourses()">
+      @if (listing()) { Loading… } @else { List courses in plan }
+    </button>
+    <button class="primary" [disabled]="!canGenerate()" (click)="generate()">
+      @if (running()) { Generating… } @else { Generate draft .docx }
+    </button>
+    @if (downloadUrl()) {
+      <button class="primary" (click)="download()">⬇ Download</button>
+    }
+  </div>
+
+  @if (error()) { <div class="error">⚠ {{ error() }}</div> }
+  @if (running()) { <div class="progress">parsing plan · drafting fields · packaging docx …</div> }
+
+  @if (courses()) {
+    @let cs = courses()!;
+    <section class="report">
+      <h4>Courses in plan ({{ cs.courses.length }})</h4>
+      <p class="muted">Click a course to use its name as input.</p>
+      <ul class="course-list">
+        @for (c of cs.courses; track c.course_name) {
+          <li (click)="courseName.set(c.course_name)">
+            <strong>{{ c.course_name }}</strong>
+            @if (c.credits) { <span class="muted"> · {{ c.credits }} cr</span> }
+            @if (c.semester) { <span class="muted"> · sem {{ c.semester }}</span> }
+          </li>
+        }
+      </ul>
+    </section>
+  } @else if (!running() && !listing()) {
+    <p class="hint">Pick a Plan, list its courses, type or click a course name, then generate.</p>
+  }
+</div>

@@ -1,0 +1,122 @@
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.migrate-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+}
+
+.inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+
+  .label { font-size: 12px; color: #6b7280; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    .chip-label { color: #4b5563; }
+    select {
+      background: transparent;
+      border: none;
+      font: inherit;
+      color: #1f2937;
+      &:focus { outline: none; }
+    }
+  }
+}
+
+.action-bar {
+  display: flex;
+  gap: 8px;
+
+  .primary {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font: inherit;
+    &:hover:not(:disabled) { background: #4f46e5; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.progress {
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.report {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 16px;
+
+  h4 { margin: 0 0 4px; }
+  .legend { color: #6b7280; font-size: 12px; margin: 0 0 12px; }
+
+  .match-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    li {
+      display: grid;
+      grid-template-columns: 24px 1fr 24px 1fr;
+      gap: 6px;
+      align-items: baseline;
+      padding: 4px 6px;
+      border-radius: 4px;
+      &:hover { background: #f9fafb; }
+
+      .conf { text-align: center; }
+      .new { font-weight: 500; color: #111827; }
+      .arrow { color: #9ca3af; text-align: center; }
+      .old { color: #6b7280; }
+    }
+  }
+
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: #4338ca; }
+}
+
+.hint {
+  color: #6b7280;
+  background: #ffffff;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 0;
+}

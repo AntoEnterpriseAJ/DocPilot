@@ -1,0 +1,102 @@
+<div class="tool validate-tool">
+  <header class="inputs">
+    <span class="label">Inputs:</span>
+    <label class="chip">
+      <span class="chip-label">📄 FD</span>
+      <select (change)="onPickFd($event)">
+        <option value="">— pick —</option>
+        @for (d of fdOptions(); track d.id) {
+          <option [value]="d.id" [selected]="d.id === fdId()">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+  </header>
+
+  <div class="action-bar">
+    <button class="primary" [disabled]="!canRun()" (click)="run()">
+      @if (running()) { Running… } @else { Re-run all }
+    </button>
+  </div>
+
+  @if (error()) { <div class="error">⚠ {{ error() }}</div> }
+  @if (running()) { <div class="progress">parsing · structural · numeric · bibliography …</div> }
+
+  @if (result()) {
+    @let r = result()!;
+    @let s = score();
+    <section class="report">
+      <div class="summary">
+        <span class="badge" [class.bad]="(s ?? 10) < 8">Score: {{ s }} / 10</span>
+        <span>· Struct {{ r.structural.status === 'valid' ? '✅' : '⚠ ' + r.structural.violations.length + ' issues' }}</span>
+        <span>· Numeric {{ r.numeric.passed }}/{{ r.numeric.total_checks }}</span>
+        <span>· Biblio {{ r.biblio.fresh_entries }}/{{ r.biblio.total_entries }}</span>
+      </div>
+
+      <details open>
+        <summary><strong>Structural completeness</strong> — {{ r.structural.status === 'valid' ? 'all required fields present' : r.structural.violations.length + ' issue(s) found' }}</summary>
+        @if (r.structural.violations.length) {
+          <ul>
+            @for (v of r.structural.violations; track v.code + v.message) {
+              <li>
+                <strong class="bad">✗</strong>
+                <code>{{ v.code }}</code> — {{ v.message }}
+              </li>
+            }
+          </ul>
+          @if (r.structural.suggestions.length) {
+            <div class="suggestions">
+              <strong>Suggestions:</strong>
+              @for (s of r.structural.suggestions; track s.code) {
+                <span class="suggestion-chip">{{ s.label }}</span>
+              }
+            </div>
+          }
+        } @else {
+          <p class="ok">✅ All required fields are present.</p>
+        }
+      </details>
+
+      <details open>
+        <summary><strong>Numeric consistency</strong> — {{ r.numeric.summary }}</summary>
+        @if (r.numeric.issues.length) {
+          <ul>
+            @for (i of r.numeric.issues; track i.code + i.message) {
+              <li>
+                <strong [class.bad]="i.severity === 'error'">
+                  {{ i.severity === 'error' ? '✗' : i.severity === 'warning' ? '⚠' : 'ℹ' }}
+                </strong>
+                <code>{{ i.code }}</code> — {{ i.message }}
+                @if (i.expected != null && i.actual != null) {
+                  <span class="muted"> (expected {{ i.expected }}, actual {{ i.actual }})</span>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="ok">✅ All numeric checks passed.</p>
+        }
+      </details>
+
+      <details open>
+        <summary><strong>Bibliography</strong> — {{ r.biblio.summary }}</summary>
+        @if (r.biblio.issues.length) {
+          <ul>
+            @for (i of r.biblio.issues; track i.code + i.entry_text) {
+              <li>
+                <strong [class.bad]="i.severity === 'error'">
+                  {{ i.severity === 'error' ? '✗' : i.severity === 'warning' ? '⚠' : 'ℹ' }}
+                </strong>
+                {{ i.message }}
+                <div class="muted">{{ i.entry_text }}</div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="ok">✅ Bibliography looks fresh.</p>
+        }
+      </details>
+    </section>
+  } @else if (!running()) {
+    <p class="hint">Pick an FD, then click <strong>Re-run all</strong> to score format · numeric · bibliography in one go.</p>
+  }
+</div>

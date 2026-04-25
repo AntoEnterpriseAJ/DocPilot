@@ -1,0 +1,35 @@
+@if (open()) {
+  <div class="backdrop" (click)="close()"></div>
+  <div class="palette" role="dialog">
+    <input
+      type="text"
+      placeholder="Type a command or search…"
+      autofocus
+      [ngModel]="query()"
+      (ngModelChange)="query.set($event)"
+    />
+
+    <div class="section">
+      <div class="section-title">COMMANDS</div>
+      @for (c of filtered(); track c.id) {
+        <button class="row" (click)="runCommand(c)">
+          <span class="icon">{{ c.icon }}</span>
+          <span class="label">{{ c.label }}</span>
+          @if (c.hint) { <span class="hint">{{ c.hint }}</span> }
+        </button>
+      }
+    </div>
+
+    @if (recentDocs().length > 0) {
+      <div class="section">
+        <div class="section-title">RECENT DOCUMENTS</div>
+        @for (d of recentDocs(); track d.id) {
+          <button class="row" (click)="openDoc(d.id)">
+            <span class="icon">📄</span>
+            <span class="label">{{ d.name }}</span>
+          </button>
+        }
+      </div>
+    }
+  </div>
+}

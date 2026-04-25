@@ -1,0 +1,145 @@
+:host {
+  display: block;
+  height: 100%;
+  font-size: 13px;
+}
+
+.explorer-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px 8px;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.case-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+
+  .case-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #6b7280;
+    letter-spacing: 0.05em;
+  }
+  .case-name {
+    flex: 1;
+    font-weight: 600;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.ghost-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  &:hover { color: #111827; }
+}
+
+.group-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.05em;
+  margin: 0 6px 6px;
+}
+
+.kind-bucket {
+  margin-bottom: 6px;
+}
+.kind-label {
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.doc-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background: #f3f4f6;
+    .row-x { visibility: visible; }
+  }
+
+  .doc-icon { width: 16px; text-align: center; }
+  .doc-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .doc-status {
+    color: #16a34a;
+    font-size: 11px;
+  }
+  .row-x {
+    visibility: hidden;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 14px;
+    padding: 0 2px;
+    &:hover { color: #ef4444; }
+  }
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 6px 4px 0;
+  padding: 14px 8px;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  background: #fafafa;
+  text-align: center;
+
+  small { color: #9ca3af; font-size: 11px; }
+  &:hover { border-color: #6366f1; color: #4338ca; background: #eef2ff; }
+}
+
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: #1f2937;
+
+  &:hover:not(.disabled) { background: #eef2ff; color: #4338ca; }
+  &.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .tool-icon { width: 16px; text-align: center; }
+}

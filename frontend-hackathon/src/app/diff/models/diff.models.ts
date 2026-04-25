@@ -46,3 +46,9 @@ export interface DiffResponse {
   logic_changes: LogicChange[];
   summary: DiffSummary;
 }
+
+export interface DiffNarrative {
+  narrative: string;
+  key_changes: string[];
+  action_items: string[];
+}

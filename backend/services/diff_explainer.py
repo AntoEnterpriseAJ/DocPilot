@@ -13,12 +13,30 @@ from services import claude_service
 
 
 _SYSTEM_PROMPT = (
-    "Ești un asistent academic care explică clar și concis schimbările dintre "
-    "două versiuni ale unui document academic românesc (Fișa Disciplinei sau "
-    "Plan de Învățământ). Scrii în limba română, formal dar accesibil. "
-    "Te concentrezi pe ce s-a schimbat semnificativ, NU pe diferențe minore "
-    "de formatare. Evidențiezi în mod special schimbările care necesită "
-    "acțiune din partea profesorului."
+    "Ești un asistent academic care raportează schimbările dintre două versiuni "
+    "ale unui document academic românesc (Fișa Disciplinei sau Plan de Învățământ). "
+    "Scrii în română, telegrafic și factual.\n\n"
+    "REGULI ABSOLUTE — Încalcarea oricăreia face raportul inutil:\n"
+    "1. FIECARE bullet din key_changes ȘI action_items TREBUIE să înceapă cu "
+    "numele exact al secțiunii din date, între paranteze drepte. Format obligatoriu: "
+    "'[Nume secțiune] <descriere schimbare>'. "
+    "Folosește numele exact din câmpul 'Secțiune:' din input.\n"
+    "2. Când raportezi un procent sau număr, spune EXPLICIT la ce componentă "
+    "se referă (curs, seminar, laborator, examen final, examen parțial, temă, etc.) "
+    "— nu folosi termeni vagi ca 'evaluare' sau 'pondere'.\n"
+    "3. Când raportezi o referință bibliografică adăugată/eliminată, spune în "
+    "ce secțiune (ex. 'Bibliografie curs', 'Bibliografie seminar').\n"
+    "4. Niciun adjectiv inutil, nicio introducere, nicio concluzie. Doar fapte.\n"
+    "5. Ignoră schimbările pur cosmetice (spații, majuscule, ordine de cuvinte).\n"
+    "6. Dacă nu există schimbări semnificative, spune asta într-o singură propoziție.\n\n"
+    "EXEMPLE GREȘITE (NU folosi acest stil):\n"
+    "  ✗ 'Evaluare curs: 67% → 50%'\n"
+    "  ✗ 'Pondere notă finală: 100% → 25%'\n"
+    "  ✗ 'Adăugat: referință bibliografică .NET documentation'\n\n"
+    "EXEMPLE CORECTE (folosește acest stil):\n"
+    "  ✓ '[10. Evaluare] Examen final: 67% → 50%'\n"
+    "  ✓ '[10. Evaluare] Activitate seminar: 0% → 25% (nou)'\n"
+    "  ✓ '[8.2 Bibliografie curs] Adăugat: .NET documentation, Microsoft Corporation'"
 )
 
 
@@ -67,26 +85,32 @@ _EXPLAIN_TOOL: dict = {
             "narrative": {
                 "type": "string",
                 "description": (
-                    "2-4 paragrafe în română care explică, la nivel de ansamblu, "
-                    "ce s-a schimbat între cele două versiuni. Adresează-te direct "
-                    "profesorului ('Ați avut...', 'Va trebui să...')."
+                    "MAXIM 2 propoziții scurte (sub 40 de cuvinte total) care rezumă "
+                    "ce s-a schimbat. Fără introduceri, fără 'aȜi avut', fără saluturi. "
+                    "Doar faptul. Exemplu: 'Examenul final a scăzut de la 70% la 60%. "
+                    "S-au adăugat 3 teme noi de laborator.'"
                 ),
             },
             "key_changes": {
                 "type": "array",
                 "items": {"type": "string"},
                 "description": (
-                    "Lista celor mai importante schimbări (3-7 puncte), formulate "
-                    "scurt și concret, cu valori specifice unde e relevant."
+                    "3-7 puncte. FIECARE bullet TREBUIE să înceapă cu numele exact al "
+                    "secțiunii între paranteze drepte: '[Nume secțiune] <schimbare>'. "
+                    "FIECARE valoare numerică trebuie să spună la ce componentă se referă "
+                    "(curs / seminar / laborator / examen final / etc.). "
+                    "Exemplu CORECT: '[10. Evaluare] Examen final: 67% → 50%'. "
+                    "Exemplu GREȘIT: 'Evaluare curs: 67% → 50%'."
                 ),
             },
             "action_items": {
                 "type": "array",
                 "items": {"type": "string"},
                 "description": (
-                    "Lista acțiunilor pe care profesorul trebuie să le facă "
-                    "ca răspuns la aceste schimbări. Poate fi listă goală dacă "
-                    "schimbările sunt pur informative."
+                    "Doar acțiuni concrete. FIECARE începe cu '[Nume secțiune]' și "
+                    "identifică explicit componenta afectată. Imperativ. Sub 22 cuvinte. "
+                    "Exemplu: '[10. Evaluare] Redistribuiți 17% scoase din examenul final "
+                    "la activitatea de seminar'. Listă goală dacă nu e nimic de făcut."
                 ),
             },
         },
@@ -125,11 +149,33 @@ def _format_diff_for_prompt(diff: dict[str, Any]) -> str:
     modified_sections = [s for s in sections if s.get("status") in {"modified", "added", "removed"}]
     if modified_sections:
         parts.append("\nSECȚIUNI MODIFICATE/ADĂUGATE/ELIMINATE:")
-        for sec in modified_sections[:20]:  # keep prompt bounded
+        for sec in modified_sections[:30]:  # keep prompt bounded
             name = sec.get("name", "?")
             status = sec.get("status", "?")
             parts.append(f"\n  Secțiune: '{name}' [{status}]")
-            for line in (sec.get("lines") or [])[:15]:
+            # Emit changes with surrounding context lines so the LLM can see
+            # table row labels / headers that immediately precede a numeric change.
+            all_lines = sec.get("lines") or []
+            # Mark which line indices are changes vs equal
+            change_idx = {
+                i for i, ln in enumerate(all_lines)
+                if ln.get("type") in {"remove", "add", "replace"}
+            }
+            # Keep equal lines that are within 2 lines of any change (context window)
+            keep_idx = set(change_idx)
+            for i in change_idx:
+                for j in (i - 2, i - 1, i + 1, i + 2):
+                    if 0 <= j < len(all_lines):
+                        keep_idx.add(j)
+            emitted = 0
+            prev_i = -2
+            for i in sorted(keep_idx):
+                if emitted >= 60:
+                    parts.append("    ... (restul liniilor omise)")
+                    break
+                if i > prev_i + 1:
+                    parts.append("    ...")
+                line = all_lines[i]
                 t = line.get("type", "?")
                 old_t = (line.get("old_text") or "").strip()
                 new_t = (line.get("new_text") or "").strip()
@@ -140,6 +186,12 @@ def _format_diff_for_prompt(diff: dict[str, Any]) -> str:
                 elif t == "replace":
                     parts.append(f"    - {old_t}")
                     parts.append(f"    + {new_t}")
+                else:  # equal / context
+                    ctx = (new_t or old_t)
+                    if ctx:
+                        parts.append(f"      {ctx}")
+                prev_i = i
+                emitted += 1
 
     if not parts:
         return "Diferența nu conține modificări semnificative."

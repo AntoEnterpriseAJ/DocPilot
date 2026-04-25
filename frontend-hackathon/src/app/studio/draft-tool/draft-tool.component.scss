@@ -1,0 +1,64 @@
+:host { display: block; height: 100%; width: 100%; }
+
+.tool { display: flex; flex-direction: column; gap: 12px; }
+
+.inputs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  background: #ffffff; padding: 8px 12px;
+  border: 1px solid #e5e7eb; border-radius: 6px;
+  .label { font-size: 12px; color: #6b7280; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #f3f4f6; border-radius: 12px; padding: 2px 8px; font-size: 12px;
+    .chip-label { color: #4b5563; }
+    select, input { background: transparent; border: none; font: inherit; color: #1f2937; &:focus { outline: none; } }
+  }
+}
+
+.action-bar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  .primary {
+    background: #6366f1; color: #fff; border: none; border-radius: 4px;
+    padding: 6px 14px; cursor: pointer; font: inherit;
+    &:hover:not(:disabled) { background: #4f46e5; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}
+
+.error {
+  background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+  border-radius: 4px; padding: 8px 12px;
+}
+
+.progress {
+  background: #eef2ff; color: #4338ca; border-radius: 4px;
+  padding: 6px 12px; font-size: 13px; font-family: monospace;
+}
+
+.report {
+  background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px;
+  padding: 12px 16px;
+  h4 { margin: 12px 0 4px; }
+  .muted { color: #6b7280; }
+  .ok { color: #16a34a; }
+  .summary { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  .badge {
+    background: #ecfdf5; color: #065f46; border-radius: 12px; padding: 2px 10px; font-size: 12px;
+    &.bad { background: #fef3c7; color: #92400e; }
+  }
+  details > summary { cursor: pointer; padding: 6px 0; }
+  ul { padding-left: 20px; }
+  code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+}
+
+.hint {
+  color: #6b7280; background: #ffffff; border: 1px dashed #d1d5db;
+  border-radius: 6px; padding: 16px; margin: 0;
+}
+
+.bad { color: #b91c1c; }
+
+.course-list { list-style: none; padding: 0; margin: 0; max-height: 240px; overflow: auto; }
+.course-list li { cursor: pointer; padding: 6px 8px; border-radius: 4px; display: flex; justify-content: space-between; gap: 8px; }
+.course-list li:hover { background: #eef2ff; }
+.course-list .meta { color: #6b7280; font-size: 12px; }

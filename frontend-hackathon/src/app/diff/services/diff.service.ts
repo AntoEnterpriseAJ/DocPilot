@@ -6,7 +6,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, timeout } from 'rxjs';
-import { DiffResponse } from '../models/diff.models';
+import { DiffResponse, DiffNarrative } from '../models/diff.models';
 
 @Injectable({
   providedIn: 'root'
@@ -44,6 +44,16 @@ export class DiffService {
   health(): Observable<{ status: string }> {
     // The backend might not have a /health endpoint, returning dummy data for now
     return new Observable(obs => obs.next({ status: 'ok' }));
+  }
+
+  /**
+   * POST /api/documents/explain-diff (FastAPI, via proxy) — turn a DiffResponse into a
+   * human-language narrative + key changes + action items.
+   */
+  explainDiff(diff: DiffResponse): Observable<DiffNarrative> {
+    return this.http
+      .post<DiffNarrative>('/api/documents/explain-diff', { diff })
+      .pipe(timeout(this.compareTimeoutMs));
   }
 
   /**

@@ -1,0 +1,67 @@
+:host {
+  display: block;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #f3f4f6;
+  color: #1f2937;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.studio-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
+  grid-template-rows: minmax(0, 1fr) 28px;
+  grid-template-areas:
+    'explorer main chat'
+    'status   status status';
+  height: 100%;
+  width: 100%;
+}
+
+.explorer {
+  grid-area: explorer;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  overflow: auto;
+  min-width: 0;
+}
+
+.main {
+  grid-area: main;
+  background: #f9fafb;
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat {
+  grid-area: chat;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.status {
+  grid-area: status;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-top: 1px solid #0f172a;
+}
+
+@media (max-width: 1279px) {
+  .studio-shell {
+    grid-template-columns: 240px minmax(0, 1fr) 0px;
+  }
+  .chat {
+    display: none;
+  }
+}

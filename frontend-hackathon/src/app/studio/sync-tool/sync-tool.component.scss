@@ -1,0 +1,193 @@
+// Shared visual language for all Studio tool panels.
+// Keep this file selector-scoped via :host so it stays component-local.
+
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+
+  .label { font-size: 12px; color: #6b7280; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    .chip-label { color: #4b5563; }
+    select, input {
+      background: transparent;
+      border: none;
+      font: inherit;
+      color: #1f2937;
+      &:focus { outline: none; }
+    }
+  }
+}
+
+.action-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .primary {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font: inherit;
+    &:hover:not(:disabled) { background: #4f46e5; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+  .ghost {
+    background: transparent;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font: inherit;
+    &:hover { background: #f3f4f6; }
+  }
+}
+
+.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.progress {
+  background: #eef2ff;
+  color: #4338ca;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.report {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 16px;
+
+  h4 { margin: 12px 0 4px; }
+  .muted { color: #6b7280; }
+  .ok { color: #16a34a; }
+
+  .summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .badge {
+    background: #ecfdf5;
+    color: #065f46;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 12px;
+    &.bad { background: #fef3c7; color: #92400e; }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    th, td {
+      text-align: left;
+      padding: 4px 8px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    th { color: #6b7280; font-weight: 600; }
+    code { background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  }
+
+  ul { padding-left: 20px; }
+}
+
+.hint {
+  color: #6b7280;
+  background: #ffffff;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 0;
+}
+
+/* UC 2.2 — Competency Mapper section */
+.competency-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #d0d7e2;
+  border-radius: 6px;
+  background: #fafbfd;
+
+  h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+  .competency-summary { margin: 0 0 0.75rem; color: #334155; }
+  .muted { color: #6b7280; font-size: 0.9rem; margin: 0; }
+
+  &.pending, &.error { background: #f6f7f9; }
+}
+
+.competency-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.competency-block {
+  border-radius: 5px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid transparent;
+
+  h5 { margin: 0 0 0.4rem; font-size: 0.92rem; }
+  ul { margin: 0; padding-left: 1.1rem; li { margin-bottom: 0.25rem; line-height: 1.35; } }
+
+  &.declared { background: #ecfdf5; border-color: #a7f3d0; }
+  &.unknown { background: #fef2f2; border-color: #fecaca; }
+  &.recommended {
+    background: #fefce8;
+    border-color: #fde68a;
+    .rationale { font-size: 0.85rem; color: #475569; margin-top: 0.15rem; }
+    .confidence {
+      display: inline-block;
+      margin-top: 0.2rem;
+      font-size: 0.75rem;
+      background: #fbbf24;
+      color: #1f2937;
+      border-radius: 3px;
+      padding: 0.05rem 0.4rem;
+    }
+  }
+  &.plan-only {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+    ul { margin-top: 0.5rem; }
+  }
+}

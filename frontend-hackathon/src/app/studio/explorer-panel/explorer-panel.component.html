@@ -1,0 +1,76 @@
+<div
+  class="explorer-panel"
+  (drop)="onDrop($event)"
+  (dragover)="onDragOver($event)"
+>
+  <header class="case-header">
+    <span class="case-label">CASE</span>
+    <span class="case-name">Untitled</span>
+    <button class="ghost-btn" title="Save (coming soon)">💾</button>
+  </header>
+
+  <section class="group">
+    <div class="group-title">DOCUMENTS</div>
+
+    @for (k of kinds; track k) {
+      @let docs = store.documentsByKind()[k];
+      @if (docs.length > 0) {
+        <div class="kind-bucket">
+          <div class="kind-label">{{ kindLabels[k] }}</div>
+          @for (d of docs; track d.id) {
+            <div
+              class="doc-row"
+              (click)="openDocument(d.id)"
+              [title]="d.name"
+            >
+              <span class="doc-icon">
+                @switch (d.kind) {
+                  @case ('fd') { 📄 }
+                  @case ('plan') { 📕 }
+                  @case ('template') { 📐 }
+                  @default { 📃 }
+                }
+              </span>
+              <span class="doc-name">{{ d.name }}</span>
+              <span class="doc-status">
+                @if (d.status.parsed) { <span title="Parsed">✓</span> }
+              </span>
+              <button
+                class="row-x"
+                (click)="removeDocument($event, d.id)"
+                title="Remove"
+              >×</button>
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <label class="drop-zone">
+      <input
+        type="file"
+        multiple
+        accept=".pdf,.docx"
+        (change)="onFiles($event)"
+        hidden
+      />
+      <span>⤓ Drop or click to add</span>
+      <small>.pdf · .docx</small>
+    </label>
+  </section>
+
+  <section class="group">
+    <div class="group-title">TOOLS</div>
+    @for (t of tools; track t.kind) {
+      <button
+        class="tool-row"
+        [class.disabled]="!toolEnabled(t)"
+        [title]="toolTooltip(t)"
+        (click)="openTool(t)"
+      >
+        <span class="tool-icon">{{ t.icon }}</span>
+        <span class="tool-label">{{ t.label }}</span>
+      </button>
+    }
+  </section>
+</div>

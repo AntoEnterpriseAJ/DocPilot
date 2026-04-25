@@ -1,0 +1,158 @@
+<div class="tool sync-tool">
+  <header class="inputs">
+    <span class="label">Inputs:</span>
+    <label class="chip">
+      <span class="chip-label">📄 FD</span>
+      <select (change)="onPickFd($event)">
+        <option value="">— pick —</option>
+        @for (d of fdOptions(); track d.id) {
+          <option [value]="d.id" [selected]="d.id === fdId()">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="chip">
+      <span class="chip-label">📕 Plan</span>
+      <select (change)="onPickPlan($event)">
+        <option value="">— pick —</option>
+        @for (d of planOptions(); track d.id) {
+          <option [value]="d.id" [selected]="d.id === planId()">{{ d.name }}</option>
+        }
+      </select>
+    </label>
+  </header>
+
+  <div class="action-bar">
+    <button class="primary" [disabled]="!canRun()" (click)="run()">
+      @if (running()) { Running… } @else { Check sync }
+    </button>
+  </div>
+
+  @if (error()) { <div class="error">⚠ {{ error() }}</div> }
+  @if (running()) { <div class="progress">parsing docs · cross-validating …</div> }
+
+  @if (result()) {
+    @let r = result()!;
+    @let c = counts();
+    <section class="report">
+      <div class="summary">
+        <span class="badge" [class.bad]="r.status !== 'valid'">
+          {{ r.status === 'valid' ? '✓ valid' : '⚠ ' + r.status }}
+        </span>
+        <span>· {{ c.warn }} mismatches · {{ c.miss }} missing</span>
+      </div>
+      <p class="muted">{{ r.summary }}</p>
+
+      @if (r.field_violations.length) {
+        <h4>Field violations</h4>
+        <table>
+          <thead><tr><th>Code</th><th>Field</th><th>Message</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (v of r.field_violations; track v.code + (v.field || '')) {
+              <tr>
+                <td><code>{{ v.code }}</code></td>
+                <td>{{ v.field || '—' }}</td>
+                <td>{{ v.message }}</td>
+                <td>{{ violationStatus(v) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+      @if (r.competency_violations.length) {
+        <h4>Competency violations</h4>
+        <ul>
+          @for (v of r.competency_violations; track v.code + v.message) {
+            <li><code>{{ v.code }}</code> — {{ v.message }}</li>
+          }
+        </ul>
+      }
+
+      @if (!r.field_violations.length && !r.competency_violations.length) {
+        <p class="ok">✅ No violations detected.</p>
+      }
+    </section>
+
+    @if (mapping(); as cm) {
+      <section class="competency-section">
+        <h4>🎯 Hartă competențe (FD ↔ Plan)</h4>
+        <p class="competency-summary">{{ cm.summary }}</p>
+
+        <div class="competency-grid">
+          <div class="competency-block declared">
+            <h5>✅ Declarate corect ({{ cm.declared.length }})</h5>
+            @if (cm.declared.length > 0) {
+              <ul>
+                @for (c of cm.declared; track c.code) {
+                  <li><strong>{{ c.code }}</strong> — {{ c.title }}</li>
+                }
+              </ul>
+            } @else {
+              <p class="muted">Nicio competență declarată regăsită în catalog.</p>
+            }
+          </div>
+
+          @if (cm.unknown.length > 0) {
+            <div class="competency-block unknown">
+              <h5>⚠ Necunoscute în Plan ({{ cm.unknown.length }})</h5>
+              <ul>
+                @for (c of cm.unknown; track c.code) {
+                  <li><strong>{{ c.code }}</strong> — codul nu există în catalog</li>
+                }
+              </ul>
+            </div>
+          }
+
+          @if (cm.recommended.length > 0) {
+            <div class="competency-block recommended">
+              <h5>💡 Sugerate de AI ({{ cm.recommended.length }})</h5>
+              <ul>
+                @for (c of cm.recommended; track c.code) {
+                  <li>
+                    <strong>{{ c.code }}</strong> — {{ c.title }}
+                    <div class="rationale">{{ c.rationale }}</div>
+                    <span class="confidence">încredere: {{ c.confidence }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          } @else {
+            <div class="competency-block recommended empty">
+              <h5>💡 Sugerate de AI (0)</h5>
+              <p class="muted">
+                @if (cm.plan_only.length === 0) {
+                  Toate competențele din catalog sunt deja declarate — nimic de sugerat.
+                } @else {
+                  Niciuna dintre cele {{ cm.plan_only.length }} competențe nedeclarate nu a fost considerată potrivită pentru această disciplină.
+                }
+              </p>
+            </div>
+          }
+
+          @if (cm.plan_only.length > 0) {
+            <details class="competency-block plan-only">
+              <summary>📋 Disponibile în Plan, nedeclarate ({{ cm.plan_only.length }})</summary>
+              <ul>
+                @for (c of cm.plan_only; track c.code) {
+                  <li><strong>{{ c.code }}</strong> — {{ c.title }}</li>
+                }
+              </ul>
+            </details>
+          }
+        </div>
+      </section>
+    } @else if (mappingError()) {
+      <section class="competency-section error">
+        <h4>🎯 Hartă competențe</h4>
+        <p class="muted">Maparea competențelor a eșuat: {{ mappingError() }}</p>
+      </section>
+    } @else if (mappingRunning()) {
+      <section class="competency-section pending">
+        <h4>🎯 Hartă competențe</h4>
+        <p class="muted">Se calculează maparea competențelor…</p>
+      </section>
+    }
+  } @else if (!running()) {
+    <p class="hint">Pick an FD and a Plan, then click <strong>Check sync</strong>.</p>
+  }
+</div>

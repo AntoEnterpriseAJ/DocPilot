@@ -1,0 +1,51 @@
+<div class="chat-rail" [class.collapsed]="collapsed()">
+  <header class="chat-header">
+    <span class="title">Chat</span>
+    <button class="ghost" (click)="toggleCollapse()" title="Collapse">
+      {{ collapsed() ? '⛶' : '–' }}
+    </button>
+  </header>
+
+  @if (!collapsed()) {
+    @let ctx = activeContextChip();
+    @if (ctx) {
+      <div class="context-row">
+        <span class="ctx-label">Context:</span>
+        <span class="ctx-chip">{{ ctx }}</span>
+      </div>
+    }
+
+    <div class="messages">
+      @if (store.chat().length === 0) {
+        <div class="empty">
+          <p>Ask anything about your documents.</p>
+          <p class="hint">Active tab is auto-attached as context.</p>
+        </div>
+      }
+      @for (m of store.chat(); track m.id) {
+        <div class="msg" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
+          <div class="bubble">
+            <div class="role">{{ m.role === 'user' ? '🧑' : '🤖' }}</div>
+            <div class="text">{{ m.text }}</div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="composer">
+      <div class="quick-actions">
+        <button (click)="quickAction('explain')" title="Explain">🔍</button>
+        <button (click)="quickAction('improve')" title="Improve">✨</button>
+        <button (click)="quickAction('summarize')" title="Summarize">📋</button>
+      </div>
+      <textarea
+        rows="2"
+        placeholder="Ask about the active tab… (Enter to send)"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        (keydown)="onKey($event)"
+      ></textarea>
+      <button class="send" (click)="send()">Send ↵</button>
+    </div>
+  }
+</div>

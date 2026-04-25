@@ -1,0 +1,36 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  gap: 12px;
+
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .right {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+  }
+
+  .indicator { color: #cbd5e1; }
+}

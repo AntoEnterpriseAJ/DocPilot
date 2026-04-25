@@ -1,32 +1,35 @@
 <nav class="navbar">
   <div class="nav-container">
     <div class="nav-brand">
-      <h1>Advanced Diff</h1>
+      <h1>Advanced Diff <small>(legacy)</small></h1>
     </div>
 
     <ul class="nav-links">
       <li>
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <a routerLink="/" class="back">← Studio</a>
+      </li>
+      <li>
+        <a routerLink="/legacy" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
           📄 Document Chat
         </a>
       </li>
       <li>
-        <a routerLink="/diff" routerLinkActive="active">
+        <a routerLink="/legacy/diff" routerLinkActive="active">
           🔍 Diff Analyzer
         </a>
       </li>
       <li>
-        <a routerLink="/sync" routerLinkActive="active">
+        <a routerLink="/legacy/sync" routerLinkActive="active">
           🔗 Sync Check
         </a>
       </li>
       <li>
-        <a routerLink="/draft" routerLinkActive="active">
+        <a routerLink="/legacy/draft" routerLinkActive="active">
           📝 FD Drafter
         </a>
       </li>
       <li>
-        <a routerLink="/template-shift" routerLinkActive="active">
+        <a routerLink="/legacy/template-shift" routerLinkActive="active">
           🔄 Template Shifter
         </a>
       </li>
