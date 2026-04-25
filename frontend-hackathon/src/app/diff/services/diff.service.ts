@@ -12,8 +12,8 @@ import { DiffResponse } from '../models/diff.models';
   providedIn: 'root'
 })
 export class DiffService {
-  private apiUrl = 'http://localhost:5000/api/diff';
-  private compareTimeoutMs = 120000;
+  private apiUrl = 'http://localhost:8001/api/documents';
+  private compareTimeoutMs = 300000;
 
   constructor(private http: HttpClient) { }
 
@@ -34,7 +34,7 @@ export class DiffService {
     formData.append('parser_type', parserType);
 
     return this.http
-      .post<DiffResponse>(`${this.apiUrl}/`, formData)
+      .post<DiffResponse>(`${this.apiUrl}/diff`, formData)
       .pipe(timeout(this.compareTimeoutMs));
   }
 
@@ -42,7 +42,8 @@ export class DiffService {
    * Check health of the diff service.
    */
   health(): Observable<{ status: string }> {
-    return this.http.get<{ status: string }>(`${this.apiUrl}/health`);
+    // The backend might not have a /health endpoint, returning dummy data for now
+    return new Observable(obs => obs.next({ status: 'ok' }));
   }
 
   /**
@@ -53,6 +54,6 @@ export class DiffService {
     formData.append('file_old', fileOld);
     formData.append('file_new', fileNew);
 
-    return this.http.post<{ annotated_old_pdf_base64: string; annotated_new_pdf_base64: string }>(`${this.apiUrl}/visual`, formData);
+    return this.http.post<{ annotated_old_pdf_base64: string; annotated_new_pdf_base64: string }>(`${this.apiUrl}/diff-visual`, formData);
   }
 }

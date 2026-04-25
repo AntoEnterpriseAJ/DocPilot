@@ -8,7 +8,8 @@ import os
 from urllib.parse import quote
 from typing import Any
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+import asyncio
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic import ValidationError
@@ -49,6 +50,12 @@ from schemas.template_shift import (
     SectionMatchReport,
     ShiftReport,
 )
+from schemas.diff import DiffResponse, DiffSummary, LogicChange, SectionDiff
+from services.diff_adapter import to_sections
+from services.diff_difflib_differ import DifflibDiffer
+from services.diff_regex_analyzer import SemanticAnalyzer
+from services.diff_visual_differ import VisualDiffer
+
 
 router = APIRouter()
 
@@ -705,3 +712,64 @@ def _build_shift_report(
         llm_used=llm_available
         and any(m.confidence.startswith("llm-") for m in matches),
     )
+
+
+@router.post("/diff", response_model=DiffResponse)
+async def diff_documents(
+    file_old: UploadFile = File(...),
+    file_new: UploadFile = File(...),
+    parser_type: str = Form(None),
+) -> DiffResponse:
+    """Compare two PDF documents (text/logic diff)."""
+    try:
+        old_doc, new_doc = await asyncio.gather(
+            parse_document(file=file_old),
+            parse_document(file=file_new)
+        )
+
+        old_sections = to_sections(old_doc)
+        new_sections = to_sections(new_doc)
+
+        differ = DifflibDiffer()
+        analyzer = SemanticAnalyzer()
+
+        section_diffs = differ.diff(old_sections, new_sections)
+        logic_changes = analyzer.analyze(old_sections, new_sections, section_diffs)
+
+        summary = DiffSummary(
+            total_sections=len(set(old_sections.keys()) | set(new_sections.keys())),
+            modified=sum(1 for s in section_diffs if s.status == "modified"),
+            added=sum(1 for s in section_diffs if s.status == "added"),
+            removed=sum(1 for s in section_diffs if s.status == "removed"),
+            unchanged=sum(1 for s in section_diffs if s.status == "equal"),
+            logic_changes_count=len(logic_changes)
+        )
+
+        return DiffResponse(
+            sections=section_diffs,
+            logic_changes=logic_changes,
+            summary=summary
+        )
+    except Exception as exc:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/diff-visual")
+async def diff_visual(
+    file_old: UploadFile = File(...),
+    file_new: UploadFile = File(...),
+    parser_type: str = Form(None),
+) -> dict:
+    """Compare two PDF documents visually. Returns base64 encoded annotated PDFs."""
+    try:
+        old_bytes = await file_old.read()
+        new_bytes = await file_new.read()
+
+        differ = VisualDiffer()
+        result = differ.diff(old_bytes, new_bytes)
+
+        return result
+    except Exception as exc:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
