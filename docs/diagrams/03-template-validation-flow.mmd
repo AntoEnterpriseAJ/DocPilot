@@ -1,0 +1,23 @@
+flowchart TD
+    A([Extracted Document]) --> B[template_drafts\nbuild_template_schema_and_baseline_drafts]
+    B --> C([TemplateDraftResponse\ntemplate + schema + guard_drafts])
+
+    C --> D{User edits\nguard options}
+
+    D --> E[POST /api/documents/validate\ntemplate + schema + guards]
+    E --> F[template_validator\nvalidate_template]
+
+    F --> G{Guards OK?}
+
+    G -->|valid| H([ValidationResult\nstatus: valid])
+
+    G -->|violations| I([ValidationResult\nstatus: invalid\nviolations list])
+
+    I --> J{User requests\nfix suggestions}
+
+    J --> K[POST /api/documents/suggest\nviolations + user message]
+    K --> L[template_suggester\nsuggest_template_fixes via Claude]
+    L --> M([SemanticSuggestionResult\nexplanation + patches\nconfidence per suggestion])
+
+    M --> N[User applies patch]
+    N --> E

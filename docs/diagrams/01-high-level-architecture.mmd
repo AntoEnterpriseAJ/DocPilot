@@ -1,0 +1,37 @@
+graph TB
+    User(User)
+
+    subgraph Frontend[" Frontend - Angular 19 port 4200 "]
+        Home[Home Page\nDocument Upload + Guard Editor]
+        DiffPage[Diff Page\nPDF Comparison Viewer]
+    end
+
+    subgraph Backend[" Backend - FastAPI "]
+        Parse[POST /api/documents/parse]
+        Validate[POST /api/documents/validate]
+        Suggest[POST /api/documents/suggest]
+        Draft[POST /api/documents/draft]
+    end
+
+    subgraph DiffSvc[" Diff-Service - Flask port 5000 "]
+        DiffCompare[POST /api/diff/]
+        DiffVisual[POST /api/diff/visual]
+        DiffHealth[GET /api/diff/health]
+    end
+
+    Claude[(Claude Sonnet 3.5)]
+
+    User --> Home
+    User --> DiffPage
+
+    Home -->|PDF or image upload| Parse
+    Home -->|template + schema + guards| Validate
+    Home -->|violations + user message| Suggest
+    Home -->|extracted document| Draft
+
+    DiffPage -->|file_old + file_new| DiffCompare
+    DiffPage -->|file_old + file_new| DiffVisual
+
+    Parse --> Claude
+    Suggest --> Claude
+    Draft --> Claude

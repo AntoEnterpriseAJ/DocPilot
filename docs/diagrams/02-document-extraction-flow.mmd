@@ -1,0 +1,21 @@
+flowchart TD
+    A([Upload File - PDF or Image]) --> B{File Type?}
+
+    B -->|Image file .png .jpg .jpeg| C[scan_extractor\nConvert to base64 PNG]
+    B -->|PDF| D{pdf_router\nText density check\navg chars/page greater than 100?}
+
+    D -->|Yes - text PDF| E[text_extractor\nExtract plain text\nmax 20 pages]
+    D -->|No - scanned PDF| F[scan_extractor\nRender at 150 DPI\nmax 20 pages per batch]
+
+    C --> G[claude_service\nextract_from_images]
+    E --> H[claude_service\nextract_from_text]
+    F --> G
+
+    G --> I[ExtractedDocument]
+    H --> I
+
+    I -->|optional| J[claude_service\ngenerate_markdown]
+    J --> K[ExtractedDocument\nwith markdown_content]
+    I --> K
+
+    K --> L([JSON Response\nfields + tables + summary\nsource_route + markdown])

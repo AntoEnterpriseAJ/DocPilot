@@ -1,0 +1,17 @@
+flowchart TD
+    A([Upload\nfile_old + file_new + parser_type]) --> B[Extractor\npdfplumber_extractor\nPageText per page]
+
+    B --> C[Parser]
+    C --> FD[fd_parser\nFise de Disciplina\nSections: Identificare, Obiective,\nCompetente, Continuturi,\nStructura, Evaluare, Bibliografie]
+    C --> PI[pi_parser\nPlanuri de Invatamant\nALL-CAPS lines as section headers]
+
+    FD --> D[Differ\ndifflib_differ\nline-level diffs per section]
+    PI --> D
+
+    D --> E[Analyzer\nregex_analyzer\ndetect semantic changes]
+
+    E --> F([DiffResponse])
+
+    F --> G[sections: SectionDiff\nequal - modified - added - removed\nwith inline word-level diffs]
+    F --> H[logic_changes: LogicChange\nHOURS_CHANGED, ECTS_CHANGED\nwith severity levels]
+    F --> I[summary: DiffSummary\ntotal_sections + modified\nadded + removed + unchanged]
