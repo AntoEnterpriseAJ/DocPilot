@@ -204,7 +204,7 @@ export class ValidateToolComponent {
       titularul_activitatilor_de_seminar_laborator_proiect: 1,
       obiective_generale_ale_disciplinei: 1, competente_profesionale: 1,
       competente_transversale: 1, semestrul: 1, anul_de_studiu: 1,
-      numar_credite: 1, tipul_de_evaluare: 1,
+      numarul_de_credite: 1, tipul_de_evaluare: 1,
     }).length;
     const structuralPassed = structuralTotal - r.structural.violations.filter(v => v.code === 'field_required').length;
     const ratio =

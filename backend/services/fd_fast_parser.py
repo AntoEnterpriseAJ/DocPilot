@@ -35,8 +35,21 @@ _RE_TITULAR_SLP = re.compile(
 # Numeric fields can be followed inline by the value OR on the next line
 # ("2.4 Anul de studiu 2.5 Semestrul ...\n1 1 E DC"). Reject section-number
 # tokens like "2.5" by requiring 1–2 digits with no dot.
-_RE_AN = re.compile(r"2\.4\s*Anul\s+de\s+studiu\s+(?!\d+\.)(\d{1,2})\b")
-_RE_SEM = re.compile(r"2\.5\s*Semestrul\s+(?!\d+\.)(\d{1,2})\b")
+_RE_AN = re.compile(r"2\.4\s*Anul\s+de\s+studiu\s+(?!\d+\.)(\d{1,2}|VI{0,3}|I{1,3}|IV)\b")
+_RE_SEM = re.compile(r"2\.5\s*Semestrul\s+(?!\d+\.)(\d{1,2}|VI{0,3}|I{1,3}|IV)\b")
+
+# Some FDs render the year-of-study and semester values as Roman numerals
+# (I, II, III, …) instead of Arabic digits. Map them back to a canonical
+# numeric string so downstream consumers always see "1", "2", etc.
+_ROMAN_TO_ARABIC = {
+    "I": "1", "II": "2", "III": "3", "IV": "4", "V": "5", "VI": "6",
+}
+
+
+def _normalise_roman(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return _ROMAN_TO_ARABIC.get(value.strip().upper(), value)
 _RE_TIP_EVAL = re.compile(r"2\.6\s*Tipul\s+de\s+evaluare\s+(?!\d+\.)([A-Z]{1,3})\b")
 # 2.7 has two sub-rows on the same line: "Conținut3) DC" + "Obligativitate4) DI"
 _RE_REGIM_CONTINUT = re.compile(r"Con[țt]inut[^A-Za-z]*([A-Z]{1,3})")
@@ -80,14 +93,21 @@ _RE_CREDITE = re.compile(
 
 # --- Section 7: obiective ----------------------------------------------------
 # 7.1 "Obiectivul general al disciplinei <body>" — body may span several
-# lines; we capture greedily until the next 7.x / 8.x heading.
+# lines; we capture greedily until the next 7.x / 8.x heading. The word
+# "disciplinei" is optional because some FDs use a two-column table that
+# wraps the label across two rows ("Obiectivul general al" | <body>;
+# "disciplinei" | <body cont.>), so the value text gets interleaved with
+# a stray "disciplinei" token at the start of a continuation line.
 _RE_OBIECTIV_GENERAL = re.compile(
-    r"7\.1\s*Obiectivul\s+general\s+al\s+disciplinei\s+(.+?)(?=\n\s*7\.\d|\n\s*8\.|\Z)",
+    r"7\.1\s*Obiectivul\s+general\s+al(?:\s+disciplinei)?\s+(.+?)(?=\n\s*7\.\d|\n\s*8\.|\Z)",
     re.DOTALL,
 )
 
 # --- Section 8: competence codes (CP*/CT*) -----------------------------------
-_RE_COMPETENTA = re.compile(r"\b(CP\d+|CT\d+)\b")
+# Accept both "CP4" and "CP 4" (some FDs render the code with a space between
+# the prefix and the digit). The captured value is normalised to remove the
+# whitespace so downstream consumers see a canonical "CP4"/"CT4" form.
+_RE_COMPETENTA = re.compile(r"\b(C[PT])\s*(\d+)\b")
 
 # --- Bibliografie ------------------------------------------------------------
 # A bibliography block starts with a "Bibliografie" heading on its own line
@@ -184,8 +204,8 @@ def parse_fd(pdf_bytes: bytes) -> ExtractedDocument | None:
     # (b) labels-on-one-line, values-on-the-next. Try inline first, then
     # fall back to the multi-line pattern.
     inline = {
-        "anul_de_studiu": _first(_RE_AN),
-        "semestrul": _first(_RE_SEM),
+        "anul_de_studiu": _normalise_roman(_first(_RE_AN)),
+        "semestrul": _normalise_roman(_first(_RE_SEM)),
         "tipul_de_evaluare": _first(_RE_TIP_EVAL),
     }
     if not all(inline.values()):
@@ -193,7 +213,7 @@ def parse_fd(pdf_bytes: bytes) -> ExtractedDocument | None:
         for k, v in ml.items():
             inline.setdefault(k, None)
             if not inline[k] and v:
-                inline[k] = v
+                inline[k] = _normalise_roman(v) if k in ("anul_de_studiu", "semestrul") else v
     _add_str("anul_de_studiu", inline.get("anul_de_studiu"))
     _add_str("semestrul", inline.get("semestrul"))
     _add_str("tipul_de_evaluare", inline.get("tipul_de_evaluare"))
@@ -262,7 +282,12 @@ def parse_fd(pdf_bytes: bytes) -> ExtractedDocument | None:
     # Obiectivul general (section 7.1) — may be multi-line.
     obiectiv_match = _RE_OBIECTIV_GENERAL.search(full_text)
     if obiectiv_match:
-        obiectiv = re.sub(r"\s+", " ", obiectiv_match.group(1)).strip(" .,;•")
+        body = obiectiv_match.group(1)
+        # Two-column tables sometimes wrap the label "Obiectivul general al
+        # disciplinei" across two rows, so a stray "disciplinei" token can
+        # leak into the start of a continuation line of the value. Strip it.
+        body = re.sub(r"\n\s*disciplinei\b\s*", "\n", body)
+        obiectiv = re.sub(r"\s+", " ", body).strip(" .,;•")
         if obiectiv:
             fields.append(ExtractedField(
                 key="obiective_generale_ale_disciplinei",
@@ -274,7 +299,7 @@ def parse_fd(pdf_bytes: bytes) -> ExtractedDocument | None:
     seen: set[str] = set()
     competente: list[str] = []
     for m in _RE_COMPETENTA.finditer(full_text):
-        code = m.group(1)
+        code = f"{m.group(1)}{m.group(2)}"
         if code not in seen:
             seen.add(code)
             competente.append(code)

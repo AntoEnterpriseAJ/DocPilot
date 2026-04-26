@@ -109,7 +109,7 @@ export class SyncCheckService {
         bibliografie:                                        { required: false, type: 'list'   },
         semestrul:                                           { required: true,  type: 'number' },
         anul_de_studiu:                                      { required: true,  type: 'number' },
-        numar_credite:                                       { required: true,  type: 'number' },
+        numarul_de_credite:                                  { required: true,  type: 'number' },
         tipul_de_evaluare:                                   { required: true,  type: 'string' },
       },
     };
@@ -118,7 +118,7 @@ export class SyncCheckService {
       {
         code: 'credits_range',
         kind: 'range',
-        field: 'numar_credite',
+        field: 'numarul_de_credite',
         min_value: 1,
         max_value: 30,
         message: 'Credit count must be between 1 and 30.',
