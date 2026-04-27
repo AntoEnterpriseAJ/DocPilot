@@ -1,13 +1,13 @@
-# Teacher Paperwork Assistant
+# 📝 Teacher Paperwork Assistant
 
 AI-assisted toolkit for processing, validating, and comparing Romanian academic documents (Fisa Disciplinei / Plan de Invatamant). Built for a hackathon.
 
-## Stack
+## 🧰 Stack
 
 - **Backend** — FastAPI + Anthropic Claude (Sonnet 3.5), PyMuPDF, pdfplumber, python-docx
 - **Frontend** — Angular 19
 
-## Repository Layout
+## 📁 Repository Layout
 
 | Path | Description |
 | --- | --- |
@@ -16,7 +16,7 @@ AI-assisted toolkit for processing, validating, and comparing Romanian academic 
 | [docs/](docs/) | Architecture notes, diagrams, plans |
 | [logs/](logs/) | Sync-check run outputs |
 
-## Key Endpoints
+## 🔌 Key Endpoints
 
 Backend (`http://localhost:8000`):
 - `POST /api/documents/parse` — extract structured data from PDF/image
@@ -27,7 +27,7 @@ Backend (`http://localhost:8000`):
 - `POST /api/documents/diff` — textual diff between two documents
 - `POST /api/documents/diff-visual` — visual PDF diff (annotated PDFs)
 
-## How It Works
+## ⚙️ How It Works
 
 Conceptually the system has four jobs: **get text out of a document**, **understand what kind of document it is**, **check it against rules**, and **compare versions**.
 
@@ -77,7 +77,7 @@ The Angular frontend ([frontend/](frontend/)) wires all of this together: upload
 
 > Older, more detailed diagrams live in [docs/architecture-flow.md](docs/architecture-flow.md) — they may be partially out of date relative to the current code.
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Backend
 
@@ -100,14 +100,14 @@ npm start            # http://localhost:4200
 
 The Angular dev server proxies API calls via [proxy.conf.json](frontend/proxy.conf.json).
 
-## Tests
+## 🧪 Tests
 
 ```powershell
 cd backend
 pytest
 ```
 
-## Configuration
+## 🔑 Configuration
 
 Backend requires an `.env` in [backend/](backend/) with at minimum:
 
@@ -115,6 +115,6 @@ Backend requires an `.env` in [backend/](backend/) with at minimum:
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-## License
+## 📄 License
 
 See [LICENSE](LICENSE).
